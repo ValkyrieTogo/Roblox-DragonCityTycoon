@@ -38,7 +38,11 @@ end
 
 -- Mirrors ClickService.GetClickValue so the popup matches what the server adds.
 local function predictedClickValue(): number
-	return numberAttribute("FirePerClick", Config.BaseFirePerClick) * numberAttribute("ZoneMultiplier", 1)
+	return math.floor(
+		numberAttribute("FirePerClick", Config.BaseFirePerClick)
+			* numberAttribute("ZoneMultiplier", 1)
+			* numberAttribute("WinMultiplier", 1)
+	)
 end
 
 local function onClick()

@@ -1,8 +1,9 @@
 --!strict
 -- Melts ice walls for the local player once their Fire meets the wall's
--- requirement. The character's physics run on the client, so collision is
--- turned off here, locally only. This is cosmetic: the server grants the
--- zone multiplier by its own Fire check, so walking through early gains nothing.
+-- requirement, and freezes them again when Fire drops below it (after a win).
+-- The character's physics run on the client, so collision is changed here,
+-- locally only. This is cosmetic: the server grants the zone multiplier by its
+-- own Fire check, so walking through early gains nothing.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -12,11 +13,14 @@ local IceWalls = {}
 
 local TAG = "IceWall"
 local MELT_SECONDS = 1.2
+local FROZEN_TRANSPARENCY = 0.3
+local MELTED_TRANSPARENCY = 0.92
 
 local localPlayer = Players.LocalPlayer
 
-local walls: { BasePart } = {}
-local melted: { [BasePart]: boolean } = {}
+type WallState = { Part: BasePart, Melted: boolean, SignText: string }
+
+local walls: { WallState } = {}
 local currentFire = 0
 
 local function requiredFire(wall: BasePart): number
@@ -24,15 +28,20 @@ local function requiredFire(wall: BasePart): number
 	return if typeof(value) == "number" then value else math.huge
 end
 
-local function melt(wall: BasePart)
-	melted[wall] = true
-	wall.CanCollide = false
-	TweenService:Create(wall, TweenInfo.new(MELT_SECONDS, Enum.EasingStyle.Quad), {
-		Transparency = 0.92,
+local function findLabel(wall: BasePart): TextLabel?
+	local label = wall:FindFirstChild("Label", true)
+	return if label and label:IsA("TextLabel") then label else nil
+end
+
+local function melt(state: WallState)
+	state.Melted = true
+	state.Part.CanCollide = false
+	TweenService:Create(state.Part, TweenInfo.new(MELT_SECONDS, Enum.EasingStyle.Quad), {
+		Transparency = MELTED_TRANSPARENCY,
 	}):Play()
 
-	local label = wall:FindFirstChild("Label", true)
-	if label and label:IsA("TextLabel") then
+	local label = findLabel(state.Part)
+	if label then
 		label.Text = "Melted"
 		TweenService:Create(label, TweenInfo.new(MELT_SECONDS * 2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			TextTransparency = 1,
@@ -41,27 +50,52 @@ local function melt(wall: BasePart)
 	end
 end
 
+local function freeze(state: WallState)
+	state.Melted = false
+	state.Part.CanCollide = true
+	TweenService:Create(state.Part, TweenInfo.new(MELT_SECONDS, Enum.EasingStyle.Quad), {
+		Transparency = FROZEN_TRANSPARENCY,
+	}):Play()
+
+	local label = findLabel(state.Part)
+	if label then
+		label.Text = state.SignText
+		label.TextTransparency = 0
+		label.TextStrokeTransparency = 0.3
+	end
+end
+
 local function refresh()
-	for _, wall in walls do
-		if not melted[wall] and currentFire >= requiredFire(wall) then
-			melt(wall)
+	for _, state in walls do
+		local qualifies = currentFire >= requiredFire(state.Part)
+		if qualifies and not state.Melted then
+			melt(state)
+		elseif not qualifies and state.Melted then
+			freeze(state)
 		end
 	end
 end
 
 local function addWall(instance: Instance)
-	if instance:IsA("BasePart") then
-		table.insert(walls, instance)
-		refresh()
+	if not instance:IsA("BasePart") then
+		return
 	end
+	local label = findLabel(instance)
+	table.insert(walls, {
+		Part = instance,
+		Melted = false,
+		SignText = if label then label.Text else "",
+	})
+	refresh()
 end
 
 local function removeWall(instance: Instance)
-	local index = table.find(walls, instance :: any)
-	if index then
-		table.remove(walls, index)
+	for index, state in walls do
+		if state.Part == instance then
+			table.remove(walls, index)
+			return
+		end
 	end
-	melted[instance :: any] = nil
 end
 
 function IceWalls.Init()

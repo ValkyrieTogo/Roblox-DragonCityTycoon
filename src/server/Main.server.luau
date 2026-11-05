@@ -9,6 +9,7 @@ local UpgradeService = require(script.Parent.Services.UpgradeService)
 local ZoneService = require(script.Parent.Services.ZoneService)
 local ClickService = require(script.Parent.Services.ClickService)
 local GrowthService = require(script.Parent.Services.GrowthService)
+local WinService = require(script.Parent.Services.WinService)
 
 print(`[{Config.GameName}] server starting`)
 
@@ -19,5 +20,6 @@ UpgradeService.Init()
 ZoneService.Init()
 ClickService.Init()
 GrowthService.Init()
+WinService.Init()
 
 print(`[{Config.GameName}] server ready`)

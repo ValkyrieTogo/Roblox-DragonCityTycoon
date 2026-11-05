@@ -1,16 +1,21 @@
 --!strict
--- On-screen Fire counter. Built in code for now; reads leaderstats and player
--- attributes, all replicated by Roblox, so it needs no remotes.
+-- On-screen Fire counter, zone line, wins line and the win banner. Built in
+-- code for now; reads leaderstats and player attributes, all replicated by
+-- Roblox, so the only remote involved is the Won event for the banner.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Hud = {}
 
 local localPlayer = Players.LocalPlayer
+
+local BANNER_SECONDS = 2.5
 
 local function makeLabel(name: string, size: UDim2, position: UDim2, textSize: number, color: Color3): TextLabel
 	local label = Instance.new("TextLabel")
@@ -30,6 +35,45 @@ end
 local function numberAttribute(name: string, default: number): number
 	local value = localPlayer:GetAttribute(name)
 	return if typeof(value) == "number" then value else default
+end
+
+local function watchStat(name: string, callback: (number) -> ())
+	task.spawn(function()
+		local leaderstats = localPlayer:WaitForChild("leaderstats", 30)
+		local stat = if leaderstats then leaderstats:WaitForChild(name, 30) else nil
+		if stat and stat:IsA("IntValue") then
+			callback(stat.Value)
+			stat.Changed:Connect(callback)
+		end
+	end)
+end
+
+local function showWinBanner(screen: ScreenGui, wins: number)
+	local banner =
+		makeLabel("WinBanner", UDim2.fromOffset(600, 90), UDim2.new(0.5, 0, 0.3, 0), 72, Color3.fromRGB(255, 220, 90))
+	banner.Text = `WIN #{wins}!`
+	banner.TextStrokeTransparency = 0
+	banner.TextTransparency = 1
+	banner.Parent = screen
+
+	local sub = makeLabel("WinSub", UDim2.fromOffset(600, 40), UDim2.new(0.5, 0, 0.3, 90), 26, Color3.new(1, 1, 1))
+	sub.Text = `All Fire now x{Config.WinMultiplier(wins)}`
+	sub.TextTransparency = 1
+	sub.Parent = screen
+
+	local fadeIn = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	TweenService:Create(banner, fadeIn, { TextTransparency = 0 }):Play()
+	TweenService:Create(sub, fadeIn, { TextTransparency = 0 }):Play()
+
+	task.delay(BANNER_SECONDS, function()
+		local fadeOut = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		TweenService:Create(banner, fadeOut, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		TweenService:Create(sub, fadeOut, { TextTransparency = 1 }):Play()
+		task.delay(0.6, function()
+			banner:Destroy()
+			sub:Destroy()
+		end)
+	end)
 end
 
 function Hud.Init()
@@ -52,6 +96,10 @@ function Hud.Init()
 		makeLabel("Zone", UDim2.fromOffset(400, 30), UDim2.new(0.5, 0, 0, 112), 20, Color3.fromRGB(150, 210, 255))
 	zoneLabel.Parent = screen
 
+	local winsLabel =
+		makeLabel("Wins", UDim2.fromOffset(400, 30), UDim2.new(0.5, 0, 0, 138), 20, Color3.fromRGB(255, 220, 90))
+	winsLabel.Parent = screen
+
 	local hint =
 		makeLabel("Hint", UDim2.fromOffset(500, 30), UDim2.new(0.5, 0, 1, -60), 20, Color3.fromRGB(220, 220, 220))
 	hint.Text = "Click or tap anywhere to breathe fire"
@@ -63,32 +111,35 @@ function Hud.Init()
 		fireLabel.Text = `{Format.Short(value)} Fire`
 	end
 
+	local function updateWins(value: number)
+		winsLabel.Text = `Wins: {value}  (x{Config.WinMultiplier(value)} Fire)`
+	end
+
 	local function updateClickInfo()
 		local perClick = numberAttribute("FirePerClick", Config.BaseFirePerClick)
-		local multiplier = numberAttribute("ZoneMultiplier", 1)
-		perClickLabel.Text = `+{Format.Short(perClick * multiplier)} per click`
+		local zoneMultiplier = numberAttribute("ZoneMultiplier", 1)
+		local winMultiplier = numberAttribute("WinMultiplier", 1)
+		perClickLabel.Text = `+{Format.Short(math.floor(perClick * zoneMultiplier * winMultiplier))} per click`
 
 		local zoneName = localPlayer:GetAttribute("ZoneName")
 		if typeof(zoneName) == "string" and zoneName ~= "" then
-			zoneLabel.Text = `{zoneName}  x{multiplier}`
+			zoneLabel.Text = `{zoneName}  x{zoneMultiplier}`
 		else
 			zoneLabel.Text = ""
 		end
 	end
 
 	updateFire(0)
+	updateWins(0)
 	updateClickInfo()
-	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName" } do
+	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName", "WinMultiplier" } do
 		localPlayer:GetAttributeChangedSignal(name):Connect(updateClickInfo)
 	end
+	watchStat("Fire", updateFire)
+	watchStat("Wins", updateWins)
 
-	task.spawn(function()
-		local leaderstats = localPlayer:WaitForChild("leaderstats", 30)
-		local fire = if leaderstats then leaderstats:WaitForChild("Fire", 30) else nil
-		if fire and fire:IsA("IntValue") then
-			updateFire(fire.Value)
-			fire.Changed:Connect(updateFire)
-		end
+	Remotes.Won().OnClientEvent:Connect(function(wins: unknown)
+		showWinBanner(screen, if typeof(wins) == "number" then wins else 0)
 	end)
 end
 

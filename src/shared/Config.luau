@@ -60,6 +60,16 @@ Config.Zones = {
 Config.ZoneWidth = 120
 Config.IceWallHeight = 28
 
+-- Wins. Touching the win pad at the end of the last zone, with enough Fire for
+-- that zone, awards a Win, resets Fire and upgrades, and respawns the player.
+-- Every Win permanently multiplies all Fire gained.
+Config.WinMultiplierPerWin = 0.5 -- +50% per win
+Config.WinCooldownSeconds = 3
+
+function Config.WinMultiplier(wins: number): number
+	return 1 + math.max(wins, 0) * Config.WinMultiplierPerWin
+end
+
 -- Upgrades bought with Fire. Each level adds PerLevel to Fire per click.
 -- Cost for the next level is BaseCost * CostGrowth ^ currentLevel.
 export type Upgrade = {

@@ -41,9 +41,12 @@ local function takeToken(player: Player): boolean
 	return true
 end
 
--- What one click is worth for this player right now.
+-- What one click is worth for this player right now:
+-- upgrades, times the training ground they stand in, times their wins.
 function ClickService.GetClickValue(player: Player): number
-	return StatService.GetFirePerClick(player) * ZoneService.GetMultiplier(player)
+	return math.floor(
+		StatService.GetFirePerClick(player) * ZoneService.GetMultiplier(player) * StatService.GetWinMultiplier(player)
+	)
 end
 
 local function onClick(player: Player)
