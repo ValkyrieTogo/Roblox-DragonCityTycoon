@@ -184,8 +184,15 @@ local function dressMesh(character: Model, template: Model, root: BasePart, huma
 	end
 
 	costume:ScaleTo(MESH_SCALE)
-	-- The template's pivot is the scene origin, between the dragon's feet.
-	costume:PivotTo(root.CFrame * CFrame.new(0, -groundOffset(humanoid, root), 0) * CFrame.Angles(0, MESH_YAW, 0))
+	-- Place the mesh itself, feet on the ground under the root. The saved
+	-- model's pivot is wherever it sat in Studio, so it cannot be trusted.
+	costume.WorldPivot = mesh.CFrame
+	costume:PivotTo(
+		root.CFrame
+			* CFrame.new(0, -groundOffset(humanoid, root), 0)
+			* CFrame.Angles(0, MESH_YAW, 0)
+			* CFrame.new(0, mesh.Size.Y / 2, 0)
+	)
 
 	for _, descendant in costume:GetDescendants() do
 		if descendant:IsA("BasePart") then

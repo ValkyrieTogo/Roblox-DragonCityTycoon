@@ -73,6 +73,8 @@ local function watchPad(instance: Instance)
 end
 
 function WinService.Init()
+	-- Create the remote now so clients never wait on it.
+	Remotes.Won()
 	for _, pad in CollectionService:GetTagged(TAG) do
 		watchPad(pad)
 	end
