@@ -29,19 +29,26 @@ local PATH_HALF = 16
 local EDGE_MARGIN = 16
 local END_MARGIN = 24
 
-local DARK_ROCK = Color3.fromRGB(48, 42, 44)
 local ASH_ROCK = Color3.fromRGB(70, 62, 62)
 local EMBER = Color3.fromRGB(255, 150, 50)
 local GOLD = Color3.fromRGB(235, 190, 60)
 local THRONE_STONE = Color3.fromRGB(150, 122, 70)
 
--- Floor material per zone name. Colour comes from Config.
+-- Terrain materials per zone name: the ground and the centre path.
 Zones.FloorMaterial = {
 	["Hatchery"] = Enum.Material.Grass,
 	["Campfire"] = Enum.Material.Ground,
 	["Lava Pit"] = Enum.Material.Basalt,
 	["Volcano"] = Enum.Material.Slate,
-	["Dragon Throne"] = Enum.Material.Marble,
+	["Dragon Throne"] = Enum.Material.Sandstone,
+} :: { [string]: Enum.Material }
+
+Zones.PathMaterial = {
+	["Hatchery"] = Enum.Material.Pavement,
+	["Campfire"] = Enum.Material.Pavement,
+	["Lava Pit"] = Enum.Material.Slate,
+	["Volcano"] = Enum.Material.Basalt,
+	["Dragon Throne"] = Enum.Material.Limestone,
 } :: { [string]: Enum.Material }
 
 local function ground(r: Region, x: number, z: number): Vector3
@@ -119,14 +126,15 @@ decorators["Campfire"] = function(r)
 	local stones = 16
 	for i = 1, stones do
 		local a = (i / stones) * math.pi * 2
-		Parts.disc(
+		local d = r.Rng:NextNumber(4.5, 6.5)
+		Parts.egg(
 			f,
 			"RingStone",
-			r.Rng:NextNumber(2.4, 3.2),
-			0.9,
-			ground(r, math.cos(a) * 40, cz + math.sin(a) * 40),
+			Vector3.new(d, d * 0.55, d * r.Rng:NextNumber(0.8, 1.2)),
+			CFrame.new(ground(r, math.cos(a) * 40, cz + math.sin(a) * 40) + Vector3.new(0, d * 0.18, 0))
+				* CFrame.Angles(0, r.Rng:NextNumber(0, math.pi), 0),
 			Color3.fromRGB(110, 105, 100),
-			Enum.Material.Slate
+			Enum.Material.Rock
 		)
 		if i % 2 == 0 then
 			Props.torch(f, ground(r, math.cos(a + math.pi / stones) * 34, cz + math.sin(a + math.pi / stones) * 34))
@@ -176,7 +184,7 @@ decorators["Lava Pit"] = function(r)
 		Props.lavaCrack(f, p, r.Rng:NextNumber(6, 16), r.Rng:NextNumber(0, math.pi))
 	end
 	for _ = 1, 12 do
-		Props.rock(f, scatterPoint(r, PATH_HALF + 6), r.Rng:NextNumber(5, 11), r.Rng, DARK_ROCK)
+		Props.rock(f, scatterPoint(r, PATH_HALF + 6), r.Rng:NextNumber(5, 11), r.Rng, Enum.Material.Basalt)
 	end
 	Parts.moteField(
 		f,
@@ -219,7 +227,7 @@ decorators["Volcano"] = function(r)
 		Props.lavaCrack(f, p, r.Rng:NextNumber(6, 14), r.Rng:NextNumber(0, math.pi))
 	end
 	for _ = 1, 14 do
-		Props.rock(f, scatterPoint(r, PATH_HALF + 6), r.Rng:NextNumber(5, 12), r.Rng, ASH_ROCK)
+		Props.rock(f, scatterPoint(r, PATH_HALF + 6), r.Rng:NextNumber(5, 12), r.Rng, Enum.Material.Basalt)
 	end
 	Parts.moteField(
 		f,

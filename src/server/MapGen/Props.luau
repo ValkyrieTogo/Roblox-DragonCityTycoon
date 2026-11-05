@@ -1,202 +1,359 @@
 --!strict
--- Reusable scenery built from parts: trees, huts, eggs, fires, lava, bridges,
--- statues, gold, the throne, pillars, ice crystals and the win pad.
+-- Reusable scenery: trees, huts, eggs, fires, lava, bridges, statues, gold,
+-- the throne, pillars, ice crystals and the win pad. Natural shapes (rocks,
+-- lava, the volcano) are carved from terrain; built things are parts.
 -- Positions are the point on the ground the prop stands on.
 
 local CollectionService = game:GetService("CollectionService")
 
 local Parts = require(script.Parent.Parts)
+local Terrain = require(script.Parent.Terrain)
 
 local Props = {}
 
-local WOOD = Color3.fromRGB(105, 70, 40)
-local DARK_WOOD = Color3.fromRGB(70, 48, 30)
-local LEAF = Color3.fromRGB(70, 140, 60)
-local PINE = Color3.fromRGB(38, 88, 50)
-local STONE = Color3.fromRGB(95, 95, 100)
+local WOOD = Color3.fromRGB(112, 76, 44)
+local DARK_WOOD = Color3.fromRGB(66, 44, 28)
+local LEAF = Color3.fromRGB(78, 142, 62)
+local PINE = Color3.fromRGB(40, 92, 54)
+local STONE = Color3.fromRGB(98, 96, 100)
 local DARK_STONE = Color3.fromRGB(55, 50, 52)
-local STRAW = Color3.fromRGB(190, 150, 70)
-local EGG = Color3.fromRGB(205, 205, 212)
+local STRAW = Color3.fromRGB(196, 158, 78)
+local EGG = Color3.fromRGB(214, 212, 220)
+local EGG_SPECK = Color3.fromRGB(128, 112, 140)
 local LAVA = Color3.fromRGB(255, 120, 20)
 local LAVA_LIGHT = Color3.fromRGB(255, 150, 50)
 local IRON = Color3.fromRGB(60, 62, 70)
 local GOLD = Color3.fromRGB(235, 190, 60)
 local GOLD_DARK = Color3.fromRGB(190, 145, 40)
-local ICE = Color3.fromRGB(160, 215, 255)
+local ICE = Color3.fromRGB(170, 220, 255)
 local CRIMSON = Color3.fromRGB(150, 30, 40)
 
 local function yawToward(from: Vector3, to: Vector3): number
 	return math.atan2(from.X - to.X, from.Z - to.Z)
 end
 
+-- Slight random tint so repeated props do not look identical.
+local function vary(color: Color3, rng: Random, amount: number): Color3
+	local t = rng:NextNumber(-amount, amount)
+	return if t > 0 then color:Lerp(Color3.new(1, 1, 1), t) else color:Lerp(Color3.new(0, 0, 0), -t)
+end
+
 -- Vegetation and rocks ------------------------------------------------------
 
 function Props.tree(parent: Instance, position: Vector3, rng: Random)
 	local model = Parts.model(parent, "Tree")
-	local height = rng:NextNumber(10, 15)
-	local trunkRadius = rng:NextNumber(1, 1.5)
+	local lean = CFrame.Angles(rng:NextNumber(-0.06, 0.06), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.06, 0.06))
+	local base = CFrame.new(position) * lean
+	local trunkColor = vary(WOOD, rng, 0.12)
+
+	local lower = rng:NextNumber(5, 7)
+	local upper = rng:NextNumber(6, 9)
 	Parts.cylinder(
 		model,
 		"Trunk",
-		trunkRadius,
-		height,
-		CFrame.new(position + Vector3.new(0, height / 2, 0)),
-		WOOD,
+		rng:NextNumber(1.3, 1.7),
+		lower,
+		base * CFrame.new(0, lower / 2, 0),
+		trunkColor,
 		Enum.Material.Wood
 	)
+	Parts.cylinder(
+		model,
+		"Trunk",
+		rng:NextNumber(0.9, 1.1),
+		upper,
+		base * CFrame.new(0, lower + upper / 2 - 0.3, 0),
+		trunkColor,
+		Enum.Material.Wood
+	)
+	-- Root flare and two branches.
+	for i = 1, 3 do
+		local a = i / 3 * math.pi * 2
+		Parts.cylinder(
+			model,
+			"Root",
+			0.6,
+			2.4,
+			base
+				* CFrame.new(math.cos(a) * 1.2, 0.6, math.sin(a) * 1.2)
+				* CFrame.Angles(math.cos(a) * 0.9, 0, -math.sin(a) * 0.9),
+			trunkColor,
+			Enum.Material.Wood
+		)
+	end
+	for _ = 1, 2 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local h = lower + upper * rng:NextNumber(0.45, 0.8)
+		Parts.cylinder(
+			model,
+			"Branch",
+			0.5,
+			4.5,
+			base
+				* CFrame.new(math.cos(a) * 1.6, h, math.sin(a) * 1.6)
+				* CFrame.Angles(math.sin(a) * 0.9, 0, math.cos(a) * 0.9),
+			trunkColor,
+			Enum.Material.Wood
+		)
+	end
 
-	local crown = rng:NextNumber(10, 14)
-	local top = position + Vector3.new(0, height + crown * 0.3, 0)
-	Parts.ball(model, "Leaves", crown, top, LEAF, Enum.Material.Grass)
-	Parts.ball(
-		model,
-		"Leaves",
-		crown * 0.7,
-		top + Vector3.new(crown * 0.35, -crown * 0.1, crown * 0.2),
-		LEAF,
-		Enum.Material.Grass
-	)
-	Parts.ball(
-		model,
-		"Leaves",
-		crown * 0.65,
-		top + Vector3.new(-crown * 0.3, crown * 0.05, -crown * 0.25),
-		LEAF,
-		Enum.Material.Grass
-	)
+	local crownY = lower + upper + 1
+	local crown = rng:NextNumber(11, 15)
+	for i = 1, 6 do
+		local offset = if i == 1
+			then Vector3.zero
+			else Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.5, 0.6), rng:NextNumber(-1, 1)) * crown * 0.32
+		local d = if i == 1 then crown else crown * rng:NextNumber(0.55, 0.8)
+		local leaf = Parts.ball(
+			model,
+			"Leaves",
+			d,
+			(base * CFrame.new(offset + Vector3.new(0, crownY + crown * 0.25, 0))).Position,
+			vary(LEAF, rng, 0.14),
+			Enum.Material.LeafyGrass
+		)
+		Parts.noCollide(leaf)
+	end
 end
 
 function Props.pine(parent: Instance, position: Vector3, rng: Random)
 	local model = Parts.model(parent, "Pine")
-	local trunk = rng:NextNumber(5, 8)
+	local trunk = rng:NextNumber(4, 6)
+	local color = vary(PINE, rng, 0.12)
 	Parts.cylinder(
 		model,
 		"Trunk",
-		1,
-		trunk,
-		CFrame.new(position + Vector3.new(0, trunk / 2, 0)),
+		0.9,
+		trunk + 2,
+		CFrame.new(position + Vector3.new(0, (trunk + 2) / 2, 0)),
 		DARK_WOOD,
 		Enum.Material.Wood
 	)
 
-	local tiers = 3
+	local height = rng:NextNumber(16, 24)
 	local baseRadius = rng:NextNumber(5.5, 7.5)
-	local tierHeight = rng:NextNumber(4.5, 6)
-	for i = 0, tiers - 1 do
-		local radius = baseRadius * (1 - i * 0.28)
-		local y = trunk + i * tierHeight * 0.8 + tierHeight / 2
-		Parts.cylinder(
+	local layers = 9
+	local step = height / layers
+	for i = 0, layers - 1 do
+		local t = i / layers
+		local radius = baseRadius * (1 - t) * (1 + 0.08 * math.sin(i * 2.1))
+		local tier = Parts.cylinder(
 			model,
 			"Tier",
-			radius,
-			tierHeight,
-			CFrame.new(position + Vector3.new(0, y, 0)),
-			PINE,
+			math.max(radius, 0.8),
+			step * 1.3,
+			CFrame.new(position + Vector3.new(0, trunk + i * step + step / 2, 0)),
+			vary(color, rng, 0.05),
 			Enum.Material.Grass
 		)
+		Parts.noCollide(tier)
 	end
 end
 
-function Props.rock(parent: Instance, position: Vector3, size: number, rng: Random, color: Color3?)
-	local rock = Parts.egg(
-		parent,
-		"Rock",
-		Vector3.new(size, size * rng:NextNumber(0.55, 0.8), size * rng:NextNumber(0.8, 1.1)),
-		CFrame.new(position + Vector3.new(0, size * 0.22, 0))
-			* CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.15, 0.15)),
-		color or STONE,
-		Enum.Material.Slate
-	)
-	return rock
+-- Terrain boulder cluster, half sunk into the ground.
+function Props.rock(_parent: Instance, position: Vector3, size: number, rng: Random, material: Enum.Material?)
+	Terrain.Boulder(position + Vector3.new(0, size * 0.15, 0), size, material or Enum.Material.Rock, rng)
 end
 
 function Props.egg(parent: Instance, position: Vector3, scale: number, rng: Random)
-	local size = Vector3.new(3, 4.1, 3) * scale
-	local egg = Parts.egg(
-		parent,
-		"Egg",
-		size,
-		CFrame.new(position + Vector3.new(0, size.Y * 0.45, 0))
-			* CFrame.Angles(rng:NextNumber(-0.12, 0.12), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.12, 0.12)),
-		EGG,
-		Enum.Material.Marble
-	)
-	return egg
+	local model = Parts.model(parent, "Egg")
+	local size = Vector3.new(3, 4.2, 3) * scale
+	local tilt = CFrame.Angles(rng:NextNumber(-0.14, 0.14), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.14, 0.14))
+	local center = CFrame.new(position + Vector3.new(0, size.Y * 0.46, 0)) * tilt
+	local shell = vary(EGG, rng, 0.08)
+	Parts.egg(model, "Shell", size, center, shell, Enum.Material.Marble)
+
+	-- Speckles pressed into the shell.
+	local speckColor = vary(EGG_SPECK, rng, 0.1)
+	for _ = 1, 9 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local v = rng:NextNumber(-0.35, 0.75) -- mostly on the upper half
+		local dir = Vector3.new(math.cos(a) * math.sqrt(1 - v * v), v, math.sin(a) * math.sqrt(1 - v * v))
+		local radial = Vector3.new(dir.X * size.X / 2, dir.Y * size.Y / 2, dir.Z * size.Z / 2)
+		local d = rng:NextNumber(0.5, 1) * scale
+		local speck = Parts.egg(
+			model,
+			"Speck",
+			Vector3.new(d, d * 0.6, d),
+			center * CFrame.new(radial * 0.96) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0),
+			speckColor,
+			Enum.Material.Marble
+		)
+		Parts.noCollide(speck)
+	end
+
+	-- A nest of twigs around the base.
+	for i = 1, 8 do
+		local a = i / 8 * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+		local r = size.X * 0.55
+		local twig = Parts.cylinder(
+			model,
+			"Twig",
+			0.22 * scale,
+			rng:NextNumber(2.5, 3.5) * scale,
+			CFrame.new(position + Vector3.new(math.cos(a) * r, 0.25 * scale, math.sin(a) * r))
+				* CFrame.Angles(0, -a + rng:NextNumber(-0.4, 0.4), math.rad(90 + rng:NextNumber(-15, 15))),
+			vary(DARK_WOOD, rng, 0.15),
+			Enum.Material.Wood
+		)
+		Parts.noCollide(twig)
+	end
 end
 
 -- Buildings -----------------------------------------------------------------
 
--- A round hut with a straw roof. Its door faces `faceToward`.
+-- A round plank hut with a thatched cone roof. Its door faces `faceToward`.
 function Props.hut(parent: Instance, position: Vector3, faceToward: Vector3, rng: Random)
 	local model = Parts.model(parent, "Hut")
-	local radius = rng:NextNumber(5.5, 7)
-	local wallHeight = rng:NextNumber(6, 7.5)
-	Parts.cylinder(
+	local radius = rng:NextNumber(6, 7.5)
+	local wallHeight = rng:NextNumber(6.5, 8)
+	local yaw = yawToward(position, faceToward)
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	local wood = vary(WOOD, rng, 0.1)
+
+	Parts.disc(
 		model,
-		"Wall",
-		radius,
-		wallHeight,
-		CFrame.new(position + Vector3.new(0, wallHeight / 2, 0)),
-		WOOD,
-		Enum.Material.WoodPlanks
+		"Foundation",
+		radius + 1.2,
+		1,
+		position + Vector3.new(0, 0.5, 0),
+		STONE,
+		Enum.Material.Cobblestone
 	)
 
-	local yaw = yawToward(position, faceToward)
-	local doorFrame = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	-- Walls from vertical planks, leaving a gap for the door at the front (-Z).
+	local planks = 20
+	local doorPlanks = 2
+	local plankWidth = 2 * math.pi * radius / planks + 0.15
+	for i = 0, planks - 1 do
+		local a = (i + 0.5) / planks * math.pi * 2
+		-- Front is -Z in local space, which is angle pi here.
+		local fromDoor = math.abs(((a - math.pi + math.pi) % (math.pi * 2)) - math.pi)
+		if fromDoor < (doorPlanks / planks) * math.pi then
+			continue
+		end
+		local plank = Parts.block(
+			model,
+			"Plank",
+			Vector3.new(plankWidth, wallHeight, 0.5),
+			base * CFrame.Angles(0, -a, 0) * CFrame.new(0, wallHeight / 2 + 1, -radius),
+			vary(wood, rng, 0.08),
+			Enum.Material.WoodPlanks
+		)
+		plank.Name = "Plank"
+	end
+	-- Rope bands holding the planks.
+	for _, h in { 2.2, wallHeight - 1.2 } do
+		local band = Parts.cylinder(
+			model,
+			"Band",
+			radius + 0.35,
+			0.35,
+			CFrame.new(position + Vector3.new(0, 1 + h, 0)),
+			DARK_WOOD,
+			Enum.Material.Fabric
+		)
+		Parts.noCollide(band)
+	end
+
+	-- Door frame and door.
+	local doorWidth = 3.2
+	for _, x in { -doorWidth / 2 - 0.3, doorWidth / 2 + 0.3 } do
+		Parts.block(
+			model,
+			"DoorPost",
+			Vector3.new(0.6, wallHeight * 0.8, 0.8),
+			base * CFrame.new(x, 1 + wallHeight * 0.4, -radius),
+			DARK_WOOD,
+			Enum.Material.Wood
+		)
+	end
+	Parts.block(
+		model,
+		"DoorLintel",
+		Vector3.new(doorWidth + 1.4, 0.6, 0.8),
+		base * CFrame.new(0, 1 + wallHeight * 0.8 + 0.3, -radius),
+		DARK_WOOD,
+		Enum.Material.Wood
+	)
 	Parts.block(
 		model,
 		"Door",
-		Vector3.new(3, 5, 0.8),
-		doorFrame * CFrame.new(0, 2.5, -radius + 0.2),
-		DARK_WOOD,
-		Enum.Material.Wood
+		Vector3.new(doorWidth, wallHeight * 0.78, 0.4),
+		base * CFrame.new(0, 1 + wallHeight * 0.39, -radius + 0.5),
+		vary(DARK_WOOD, rng, 0.1),
+		Enum.Material.WoodPlanks
 	)
 
-	local roofBase = wallHeight
-	local layers = 4
-	for i = 0, layers - 1 do
-		local r = (radius + 1.8) * (1 - i * 0.23)
-		local y = roofBase + i * 1.8 + 1
-		Parts.cylinder(model, "Roof", r, 2, CFrame.new(position + Vector3.new(0, y, 0)), STRAW, Enum.Material.Fabric)
-	end
-	Parts.ball(
+	-- A window on the side with a cross bar.
+	local windowFrame = base * CFrame.Angles(0, math.rad(100), 0) * CFrame.new(0, 1 + wallHeight * 0.55, -radius - 0.1)
+	Parts.block(
 		model,
-		"Finial",
-		1.6,
-		position + Vector3.new(0, roofBase + layers * 1.8 + 0.8, 0),
-		DARK_WOOD,
-		Enum.Material.Wood
+		"Window",
+		Vector3.new(2.2, 2.2, 0.4),
+		windowFrame,
+		Color3.fromRGB(40, 36, 44),
+		Enum.Material.Glass
 	)
+	Parts.block(model, "WindowBar", Vector3.new(2.4, 0.3, 0.5), windowFrame, DARK_WOOD, Enum.Material.Wood)
+	Parts.block(model, "WindowBar", Vector3.new(0.3, 2.4, 0.5), windowFrame, DARK_WOOD, Enum.Material.Wood)
+
+	-- Thatched cone roof from overlapping petals meeting at the apex.
+	local eave = radius + 2.2
+	local roofHeight = rng:NextNumber(5.5, 7)
+	local roofBase = 1 + wallHeight - 0.4
+	local apex = position + Vector3.new(0, roofBase + roofHeight, 0)
+	local petals = 16
+	local slope = math.sqrt(eave * eave + roofHeight * roofHeight)
+	local chord = 2 * math.pi * eave / petals
+	local thatch = vary(STRAW, rng, 0.08)
+	for i = 0, petals - 1 do
+		local a = i / petals * math.pi * 2
+		local foot = position + Vector3.new(math.cos(a) * eave, roofBase, math.sin(a) * eave)
+		local mid = (foot + apex) / 2
+		local petal = Parts.block(
+			model,
+			"Thatch",
+			Vector3.new(chord * 1.35, 0.6, slope + 1),
+			CFrame.lookAt(mid, apex),
+			vary(thatch, rng, 0.05),
+			Enum.Material.Fabric
+		)
+		petal.Name = "Thatch"
+	end
+	Parts.ball(model, "Cap", 2, apex + Vector3.new(0, 0.2, 0), DARK_WOOD, Enum.Material.Wood)
+	Parts.cylinder(model, "Finial", 0.3, 2.5, CFrame.new(apex + Vector3.new(0, 1.4, 0)), DARK_WOOD, Enum.Material.Wood)
 end
 
 -- Fire ----------------------------------------------------------------------
 
 function Props.campfire(parent: Instance, position: Vector3, size: number, rng: Random)
 	local model = Parts.model(parent, "Campfire")
-	local ring = 6
+	local ring = 7
 	for i = 1, ring do
-		local a = (i / ring) * math.pi * 2
-		Parts.ball(
+		local a = (i / ring) * math.pi * 2 + rng:NextNumber(-0.15, 0.15)
+		local d = size * rng:NextNumber(0.45, 0.7)
+		Parts.egg(
 			model,
 			"Stone",
-			size * 0.55,
-			position + Vector3.new(math.cos(a) * size * 0.9, size * 0.15, math.sin(a) * size * 0.9),
-			STONE,
-			Enum.Material.Slate
+			Vector3.new(d, d * 0.7, d * rng:NextNumber(0.8, 1.2)),
+			CFrame.new(position + Vector3.new(math.cos(a) * size * 0.95, d * 0.25, math.sin(a) * size * 0.95))
+				* CFrame.Angles(0, rng:NextNumber(0, math.pi), 0),
+			vary(STONE, rng, 0.12),
+			Enum.Material.Rock
 		)
 	end
-	for i = 1, 3 do
-		local a = (i / 3) * math.pi * 2 + rng:NextNumber(0, 0.5)
-		local log = Parts.cylinder(
+	for i = 1, 4 do
+		local a = (i / 4) * math.pi * 2 + rng:NextNumber(0, 0.5)
+		Parts.cylinder(
 			model,
 			"Log",
-			size * 0.14,
+			size * 0.13,
 			size * 1.3,
-			CFrame.new(position + Vector3.new(0, size * 0.35, 0)) * CFrame.Angles(0, a, math.rad(65)),
-			DARK_WOOD,
+			CFrame.new(position + Vector3.new(0, size * 0.32, 0)) * CFrame.Angles(0, a, math.rad(62)),
+			vary(DARK_WOOD, rng, 0.12),
 			Enum.Material.Wood
 		)
-		log.Name = "Log"
 	end
 
 	local core = Parts.block(
@@ -267,45 +424,46 @@ function Props.pillar(parent: Instance, position: Vector3, height: number, color
 	Parts.light(core, LAVA_LIGHT, 30, 2)
 end
 
--- Lava ----------------------------------------------------------------------
+-- Lava (terrain) --------------------------------------------------------------
 
+-- A sunken pool of cracked lava with a glow above it.
 function Props.lavaPool(parent: Instance, position: Vector3, radius: number)
-	local model = Parts.model(parent, "LavaPool")
-	Parts.disc(model, "Rim", radius + 2.5, 0.8, position + Vector3.new(0, 0.1, 0), DARK_STONE, Enum.Material.Basalt)
-	local lava = Parts.disc(model, "Lava", radius, 0.6, position + Vector3.new(0, 0.4, 0), LAVA, Enum.Material.Neon)
-	Parts.noCollide(lava)
-	Parts.light(lava, LAVA_LIGHT, radius * 3, 2)
-	Parts.motes(lava, radius * 0.6, LAVA_LIGHT, 0.5)
+	Terrain.Column(position + Vector3.new(0, -1, 0), 3, radius + 1, Enum.Material.Air)
+	Terrain.Column(position + Vector3.new(0, -3.5, 0), 3, radius, Enum.Material.CrackedLava)
+	local glow = Parts.block(
+		parent,
+		"LavaGlow",
+		Vector3.new(radius, 1, radius),
+		CFrame.new(position + Vector3.new(0, 1, 0)),
+		LAVA
+	)
+	Parts.invisible(glow)
+	Parts.light(glow, LAVA_LIGHT, radius * 3, 2)
+	Parts.motes(glow, radius * 0.6, LAVA_LIGHT, 0.5)
 end
 
--- A lava river along a polyline of ground points, sunk slightly into the floor.
+-- A lava river along a polyline of ground points, cut into the floor.
 function Props.lavaRiver(parent: Instance, points: { Vector3 }, width: number)
-	local model = Parts.model(parent, "LavaRiver")
 	for i = 1, #points - 1 do
 		local a = points[i]
 		local b = points[i + 1]
 		local mid = (a + b) / 2
-		local length = (b - a).Magnitude + width * 0.6
-		local bed = Parts.block(
-			model,
-			"Bed",
-			Vector3.new(width + 4, 1, length + 2),
-			CFrame.lookAt(mid, b),
-			DARK_STONE,
-			Enum.Material.Basalt
+		local length = (b - a).Magnitude + width * 0.5
+		Terrain.Block(
+			CFrame.lookAt(mid + Vector3.new(0, -1, 0), b + Vector3.new(0, -1, 0)),
+			Vector3.new(width + 2, 3, length),
+			Enum.Material.Air
 		)
-		bed.CFrame = bed.CFrame * CFrame.new(0, -0.2, 0)
-		local lava = Parts.block(
-			model,
-			"Lava",
-			Vector3.new(width, 0.8, length),
-			CFrame.lookAt(mid + Vector3.new(0, 0.3, 0), b + Vector3.new(0, 0.3, 0)),
-			LAVA,
-			Enum.Material.Neon
+		Terrain.Block(
+			CFrame.lookAt(mid + Vector3.new(0, -3.5, 0), b + Vector3.new(0, -3.5, 0)),
+			Vector3.new(width, 3, length),
+			Enum.Material.CrackedLava
 		)
-		Parts.noCollide(lava)
 		if i % 2 == 1 then
-			Parts.light(lava, LAVA_LIGHT, width * 3, 1.5)
+			local glow =
+				Parts.block(parent, "LavaGlow", Vector3.new(1, 1, 1), CFrame.new(mid + Vector3.new(0, 1, 0)), LAVA)
+			Parts.invisible(glow)
+			Parts.light(glow, LAVA_LIGHT, width * 3, 1.5)
 		end
 	end
 end
@@ -315,8 +473,8 @@ function Props.lavaCrack(parent: Instance, position: Vector3, length: number, ya
 	local crack = Parts.block(
 		parent,
 		"Crack",
-		Vector3.new(0.8, 0.4, length),
-		CFrame.new(position + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, yaw, 0),
+		Vector3.new(0.8, 0.5, length),
+		CFrame.new(position + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, yaw, 0),
 		LAVA,
 		Enum.Material.Neon
 	)
@@ -355,7 +513,6 @@ function Props.bridge(parent: Instance, cframe: CFrame, length: number)
 			)
 		end
 	end
-	-- Ramps at both ends so the deck is walkable.
 	local rampLength = 5
 	Parts.wedge(
 		model,
@@ -375,53 +532,58 @@ function Props.bridge(parent: Instance, cframe: CFrame, length: number)
 	)
 end
 
--- A cone mountain with a glowing crater and lava running down its sides.
+-- A terrain mountain with a glowing crater and lava running down its sides.
 function Props.volcano(parent: Instance, position: Vector3, radius: number, height: number, rng: Random)
-	local model = Parts.model(parent, "Volcano")
-	local tiers = 7
+	local tiers = 10
 	local tierHeight = height / tiers
-	local rockColor = Color3.fromRGB(62, 50, 50)
 	for i = 0, tiers - 1 do
-		local r = radius * (1 - i / tiers * 0.82)
-		local y = i * tierHeight + tierHeight / 2
-		Parts.cylinder(
-			model,
-			"Tier",
+		local t = i / tiers
+		local r = radius * (1 - t * 0.85) * (1 + rng:NextNumber(-0.04, 0.04))
+		local material = if t < 0.5 then Enum.Material.Rock else Enum.Material.Basalt
+		Terrain.Column(
+			position + Vector3.new(rng:NextNumber(-2, 2), i * tierHeight + tierHeight / 2, rng:NextNumber(-2, 2)),
+			tierHeight + 2,
 			r,
-			tierHeight,
-			CFrame.new(position + Vector3.new(0, y, 0)),
-			rockColor,
-			Enum.Material.Slate
+			material
+		)
+	end
+	-- Lumps around the foot so it does not look like a stack of discs.
+	for _ = 1, 8 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = radius * rng:NextNumber(0.7, 1.05)
+		Terrain.Ball(
+			position + Vector3.new(math.cos(a) * d, rng:NextNumber(0, 4), math.sin(a) * d),
+			rng:NextNumber(6, 12),
+			Enum.Material.Rock
 		)
 	end
 
-	local craterRadius = radius * 0.16
 	local top = position + Vector3.new(0, height, 0)
-	local crater = Parts.disc(model, "Crater", craterRadius, 1, top + Vector3.new(0, 0.3, 0), LAVA, Enum.Material.Neon)
-	Parts.noCollide(crater)
-	Parts.light(crater, LAVA_LIGHT, radius * 3, 3)
-	Parts.fire(crater, craterRadius * 2.5, 25)
-	Parts.motes(crater, 25, LAVA_LIGHT, 0.9)
+	local craterRadius = radius * 0.18
+	Terrain.Column(top + Vector3.new(0, -2, 0), 6, craterRadius + 2, Enum.Material.Air)
+	Terrain.Column(top + Vector3.new(0, -6, 0), 4, craterRadius, Enum.Material.CrackedLava)
 
-	-- Streams: glowing blobs stepping down the tiers.
+	-- Streams of lava down the slope, oriented boxes from the rim to the foot.
 	local streams = 4
 	for s = 1, streams do
 		local a = (s / streams) * math.pi * 2 + rng:NextNumber(-0.4, 0.4)
-		for i = tiers - 1, 1, -1 do
-			local r = radius * (1 - i / tiers * 0.82)
-			local y = i * tierHeight + 0.4
-			local blob = Parts.block(
-				model,
-				"Stream",
-				Vector3.new(4.5, 0.8, 5),
-				CFrame.new(position + Vector3.new(math.cos(a) * (r - 1.5), y, math.sin(a) * (r - 1.5)))
-					* CFrame.Angles(0, -a, 0),
-				LAVA,
-				Enum.Material.Neon
-			)
-			Parts.noCollide(blob)
-		end
+		local rim = top + Vector3.new(math.cos(a) * craterRadius, -1, math.sin(a) * craterRadius)
+		local foot = position + Vector3.new(math.cos(a) * radius * 0.95, 1, math.sin(a) * radius * 0.95)
+		local mid = (rim + foot) / 2
+		Terrain.Block(CFrame.lookAt(mid, foot), Vector3.new(5, 3, (foot - rim).Magnitude), Enum.Material.CrackedLava)
 	end
+
+	local core = Parts.block(
+		parent,
+		"CraterGlow",
+		Vector3.new(craterRadius, 1, craterRadius),
+		CFrame.new(top + Vector3.new(0, -3, 0)),
+		LAVA
+	)
+	Parts.invisible(core)
+	Parts.light(core, LAVA_LIGHT, radius * 3, 3)
+	Parts.fire(core, craterRadius * 2.5, 25)
+	Parts.motes(core, 25, LAVA_LIGHT, 0.9)
 end
 
 -- Statues and treasure --------------------------------------------------------
@@ -433,16 +595,17 @@ function Props.dragonStatue(parent: Instance, cframe: CFrame, scale: number, col
 	Parts.disc(model, "Pedestal", 7 * s, 2 * s, cframe.Position + Vector3.new(0, s, 0), DARK_STONE, Enum.Material.Slate)
 	local base = cframe * CFrame.new(0, 2 * s, 0)
 
-	Parts.block(model, "Body", Vector3.new(5, 4.5, 10) * s, base * CFrame.new(0, 4 * s, 0), color, material)
-	Parts.block(
+	Parts.egg(model, "Body", Vector3.new(5, 4.5, 10) * s, base * CFrame.new(0, 4 * s, 0), color, material)
+	Parts.cylinder(
 		model,
 		"Neck",
-		Vector3.new(2.6, 6, 2.6) * s,
+		1.4 * s,
+		6 * s,
 		base * CFrame.new(0, 7.5 * s, -4.5 * s) * CFrame.Angles(math.rad(-25), 0, 0),
 		color,
 		material
 	)
-	Parts.block(model, "Head", Vector3.new(3, 2.6, 4.5) * s, base * CFrame.new(0, 10.5 * s, -6.8 * s), color, material)
+	Parts.egg(model, "Head", Vector3.new(3, 2.6, 4.5) * s, base * CFrame.new(0, 10.5 * s, -6.8 * s), color, material)
 	Parts.block(
 		model,
 		"HornL",
@@ -475,24 +638,18 @@ function Props.dragonStatue(parent: Instance, cframe: CFrame, scale: number, col
 		color,
 		material
 	)
-	Parts.wedge(
+	Parts.cylinder(
 		model,
 		"Tail",
-		Vector3.new(1.6, 1.6, 8) * s,
-		base * CFrame.new(0, 3.2 * s, 8.5 * s) * CFrame.Angles(math.rad(-15), math.pi, 0),
+		0.8 * s,
+		8 * s,
+		base * CFrame.new(0, 3.2 * s, 8.5 * s) * CFrame.Angles(math.rad(75), 0, 0),
 		color,
 		material
 	)
 	for _, x in { -1.6, 1.6 } do
 		for _, z in { -3, 3 } do
-			Parts.block(
-				model,
-				"Leg",
-				Vector3.new(1.6, 2, 1.8) * s,
-				base * CFrame.new(x * s, 1 * s, z * s),
-				color,
-				material
-			)
+			Parts.cylinder(model, "Leg", 0.8 * s, 2 * s, base * CFrame.new(x * s, 1 * s, z * s), color, material)
 		end
 	end
 end
@@ -507,26 +664,30 @@ function Props.goldPile(parent: Instance, position: Vector3, radius: number, rng
 		GOLD_DARK,
 		Enum.Material.Metal
 	)
+	mound.Reflectance = 0.15
 	Parts.light(mound, GOLD, radius * 3, 0.8)
-	local coins = math.floor(radius * 1.6)
+	local coins = math.floor(radius * 1.8)
 	for _ = 1, coins do
 		local a = rng:NextNumber(0, math.pi * 2)
-		local d = rng:NextNumber(0, radius * 0.9)
-		local size = rng:NextNumber(1.2, 2.8)
+		local d = rng:NextNumber(0, radius * 0.95)
+		local size = rng:NextNumber(1.2, 2.6)
 		local y = math.max(0, radius * 0.45 * (1 - d / radius))
-		Parts.ball(
+		local coin = Parts.disc(
 			model,
 			"Coin",
-			size,
-			position + Vector3.new(math.cos(a) * d, y + size * 0.3, math.sin(a) * d),
-			GOLD,
+			size / 2,
+			0.35,
+			position + Vector3.new(math.cos(a) * d, y + 0.3, math.sin(a) * d),
+			vary(GOLD, rng, 0.08),
 			Enum.Material.Metal
 		)
+		coin.CFrame = coin.CFrame * CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(-0.5, 0.5), 0)
+		coin.Reflectance = 0.25
 	end
-	for _ = 1, math.floor(radius * 0.5) do
+	for _ = 1, math.floor(radius * 0.6) do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local d = rng:NextNumber(radius * 0.3, radius * 1.1)
-		Parts.block(
+		local ingot = Parts.block(
 			model,
 			"Ingot",
 			Vector3.new(3, 1, 1.6),
@@ -534,6 +695,19 @@ function Props.goldPile(parent: Instance, position: Vector3, radius: number, rng
 				* CFrame.Angles(0, rng:NextNumber(0, math.pi), 0),
 			GOLD,
 			Enum.Material.Metal
+		)
+		ingot.Reflectance = 0.3
+	end
+	for _ = 1, 3 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = rng:NextNumber(0, radius * 0.5)
+		Parts.ball(
+			model,
+			"Gem",
+			rng:NextNumber(1, 1.8),
+			position + Vector3.new(math.cos(a) * d, radius * 0.4, math.sin(a) * d),
+			Color3.fromRGB(200, 40, 60),
+			Enum.Material.Glass
 		)
 	end
 end
@@ -544,7 +718,7 @@ function Props.throne(parent: Instance, cframe: CFrame)
 	local steps = { Vector3.new(30, 2, 16), Vector3.new(24, 2, 12), Vector3.new(18, 2, 9) }
 	local y = 0
 	for i, size in steps do
-		Parts.block(
+		local step = Parts.block(
 			model,
 			"Step",
 			size,
@@ -552,10 +726,12 @@ function Props.throne(parent: Instance, cframe: CFrame)
 			GOLD_DARK,
 			Enum.Material.Metal
 		)
+		step.Reflectance = 0.1
 		y += size.Y
 	end
 	local seatBase = cframe * CFrame.new(0, y, 2)
-	Parts.block(model, "Seat", Vector3.new(9, 3.5, 7), seatBase * CFrame.new(0, 1.75, 0), GOLD, Enum.Material.Metal)
+	Parts.block(model, "Seat", Vector3.new(9, 3.5, 7), seatBase * CFrame.new(0, 1.75, 0), GOLD, Enum.Material.Metal).Reflectance =
+		0.2
 	Parts.block(
 		model,
 		"Cushion",
@@ -564,7 +740,8 @@ function Props.throne(parent: Instance, cframe: CFrame)
 		CRIMSON,
 		Enum.Material.Fabric
 	)
-	Parts.block(model, "Back", Vector3.new(9, 14, 2), seatBase * CFrame.new(0, 7, 4.5), GOLD, Enum.Material.Metal)
+	Parts.block(model, "Back", Vector3.new(9, 14, 2), seatBase * CFrame.new(0, 7, 4.5), GOLD, Enum.Material.Metal).Reflectance =
+		0.2
 	for _, x in { -3.5, 0, 3.5 } do
 		Parts.wedge(
 			model,
@@ -585,20 +762,34 @@ end
 
 -- Ice -----------------------------------------------------------------------
 
+-- A glassy ice spike: a tall tapered body with a tilted tip.
 function Props.crystal(parent: Instance, position: Vector3, height: number, rng: Random)
-	local w = rng:NextNumber(2.5, 5)
-	local crystal = Parts.block(
-		parent,
-		"Crystal",
-		Vector3.new(w, height, w * rng:NextNumber(0.8, 1.2)),
-		CFrame.new(position + Vector3.new(0, height * 0.45, 0))
-			* CFrame.Angles(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.2, 0.2)),
+	local model = Parts.model(parent, "Crystal")
+	local w = rng:NextNumber(2.5, 4.5)
+	local tilt = CFrame.Angles(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.2, 0.2))
+	local base = CFrame.new(position) * tilt
+	local body = Parts.block(
+		model,
+		"Body",
+		Vector3.new(w, height * 0.7, w * rng:NextNumber(0.8, 1.2)),
+		base * CFrame.new(0, height * 0.35, 0),
 		ICE,
-		Enum.Material.Ice
+		Enum.Material.Glass
 	)
-	crystal.Transparency = 0.15
-	crystal.Reflectance = 0.1
-	return crystal
+	body.Transparency = 0.25
+	body.Reflectance = 0.2
+	local tip = Parts.wedge(
+		model,
+		"Tip",
+		Vector3.new(w, height * 0.35, w),
+		base * CFrame.new(0, height * 0.7 + height * 0.175, 0),
+		ICE,
+		Enum.Material.Glass
+	)
+	tip.Transparency = 0.25
+	tip.Reflectance = 0.2
+	Parts.noCollide(tip)
+	return body
 end
 
 -- Win pad --------------------------------------------------------------------
@@ -608,6 +799,7 @@ function Props.winPad(parent: Instance, position: Vector3, radius: number)
 	local ring =
 		Parts.disc(model, "Ring", radius + 4, 0.4, position + Vector3.new(0, 0.2, 0), GOLD_DARK, Enum.Material.Metal)
 	Parts.noCollide(ring)
+	ring.Reflectance = 0.2
 	local pad = Parts.disc(model, "WinPad", radius, 0.8, position + Vector3.new(0, 0.4, 0), GOLD, Enum.Material.Neon)
 	CollectionService:AddTag(pad, "WinPad")
 	Parts.light(pad, GOLD, radius * 4, 3)

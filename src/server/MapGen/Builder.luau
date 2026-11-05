@@ -1,6 +1,7 @@
 --!strict
 -- Builds the whole map from code: a long floating island of zones laid end to
--- end along -Z, each with its own scenery, separated by ice gates. Used when
+-- end along -Z, each with its own scenery, separated by ice gates. The ground,
+-- cliffs and natural shapes are terrain; built things are parts. Used when
 -- Workspace has no folder named "Map". A Studio-built map replaces it by
 -- following the same contract:
 --
@@ -20,136 +21,110 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Parts = require(script.Parent.Parts)
 local Props = require(script.Parent.Props)
+local Terrain = require(script.Parent.Terrain)
 local Zones = require(script.Parent.Zones)
 
 local Builder = {}
 
-local FLOOR_TOP = 1 -- Y of the walkable surface
-local FLOOR_THICKNESS = 14
-local UNDERSIDE_THICKNESS = 24
-local RAIL_HEIGHT = 140
+local FLOOR_TOP = 0 -- Y of the walkable surface, on the 4-stud terrain grid
+local FLOOR_THICKNESS = 16
+local UNDERSIDE_THICKNESS = 28
+local RAIL_HEIGHT = 160
 local PATH_WIDTH = 28
 local GATE_DOOR_WIDTH = 40
-local GATE_THICKNESS = 5
+local GATE_THICKNESS = 6
 
-local ISLAND_ROCK = Color3.fromRGB(72, 66, 68)
-local ISLAND_UNDER = Color3.fromRGB(52, 46, 48)
-local ICE = Color3.fromRGB(160, 215, 255)
-local ICE_DEEP = Color3.fromRGB(120, 180, 240)
+local ICE = Color3.fromRGB(170, 220, 255)
+local ICE_DEEP = Color3.fromRGB(130, 190, 245)
 local LAVA = Color3.fromRGB(255, 120, 20)
 local POST = Color3.fromRGB(60, 60, 60)
 
-local function lighten(color: Color3, amount: number): Color3
-	return color:Lerp(Color3.new(1, 1, 1), amount)
-end
-
-local function buildFloor(
-	map: Folder,
-	index: number,
-	zone: Config.Zone,
-	startZ: number,
-	endZ: number,
-	width: number
-): Part
+-- Terrain ground for one zone plus an invisible slab for zone detection.
+local function buildFloor(map: Folder, index: number, zone: Config.Zone, startZ: number, endZ: number, width: number)
 	local length = startZ - endZ
 	local centerZ = (startZ + endZ) / 2
+	local material = Zones.FloorMaterial[zone.Name] or Enum.Material.Slate
 
-	local floor = Parts.block(
+	Terrain.Block(
+		CFrame.new(0, FLOOR_TOP - FLOOR_THICKNESS / 2, centerZ),
+		Vector3.new(width, FLOOR_THICKNESS, length),
+		material
+	)
+	Terrain.Block(
+		CFrame.new(0, FLOOR_TOP - 2, centerZ),
+		Vector3.new(PATH_WIDTH, 4, length),
+		Zones.PathMaterial[zone.Name] or Enum.Material.Pavement
+	)
+	-- Darker rock below so the island reads as a thick floating mass.
+	Terrain.Block(
+		CFrame.new(0, FLOOR_TOP - FLOOR_THICKNESS - UNDERSIDE_THICKNESS / 2 + 2, centerZ),
+		Vector3.new(width * 0.84, UNDERSIDE_THICKNESS, length * 0.94),
+		Enum.Material.Rock
+	)
+
+	local sensor = Parts.block(
 		map,
 		`Zone{index}Floor`,
-		Vector3.new(width, FLOOR_THICKNESS, length),
-		CFrame.new(0, FLOOR_TOP - FLOOR_THICKNESS / 2, centerZ),
-		zone.Color,
-		Zones.FloorMaterial[zone.Name] or Enum.Material.Slate
+		Vector3.new(width, 2, length),
+		CFrame.new(0, FLOOR_TOP - 1, centerZ),
+		zone.Color
 	)
-	floor:SetAttribute("ZoneIndex", index)
-	CollectionService:AddTag(floor, "ZoneFloor")
-
-	-- Thick dark underside so the island reads as floating rock.
-	Parts.block(
-		map,
-		"Underside",
-		Vector3.new(width * 0.86, UNDERSIDE_THICKNESS, length * 0.94),
-		CFrame.new(0, FLOOR_TOP - FLOOR_THICKNESS - UNDERSIDE_THICKNESS / 2 + 1, centerZ),
-		ISLAND_UNDER,
-		Enum.Material.Slate
-	)
-
-	-- Centre path, slightly lighter, flush enough to walk over without a bump.
-	local path = Parts.block(
-		map,
-		"Path",
-		Vector3.new(PATH_WIDTH, 0.3, length),
-		CFrame.new(0, FLOOR_TOP + 0.1, centerZ),
-		lighten(zone.Color, 0.25),
-		Enum.Material.Cobblestone
-	)
-	Parts.noCollide(path)
-
-	return floor
+	Parts.invisible(sensor)
+	sensor:SetAttribute("ZoneIndex", index)
+	CollectionService:AddTag(sensor, "ZoneFloor")
 end
 
--- Boulders along the edges and jagged rock hanging below.
-local function buildCliffs(
-	map: Folder,
-	rng: Random,
-	startZ: number,
-	endZ: number,
-	width: number,
-	isFirst: boolean,
-	isLast: boolean
-)
+-- Boulders along the edges and lumpy rock hanging below.
+local function buildCliffs(rng: Random, startZ: number, endZ: number, width: number, isFirst: boolean, isLast: boolean)
 	local half = width / 2
 
-	local z = startZ - 12
-	while z > endZ + 12 do
+	local z = startZ - 10
+	while z > endZ + 10 do
 		for _, side in { -1, 1 } do
-			local size = rng:NextNumber(14, 26)
-			local x = side * (half - rng:NextNumber(0, 6))
-			Props.rock(map, Vector3.new(x, FLOOR_TOP - size * 0.4, z + rng:NextNumber(-8, 8)), size, rng, ISLAND_ROCK)
+			local size = rng:NextNumber(16, 30)
+			local x = side * (half - rng:NextNumber(-2, 6))
+			Terrain.Boulder(
+				Vector3.new(x, FLOOR_TOP - size * 0.3, z + rng:NextNumber(-8, 8)),
+				size,
+				Enum.Material.Rock,
+				rng
+			)
 		end
-		z -= 28
+		z -= 24
 	end
 
-	z = startZ - 24
-	while z > endZ + 24 do
+	z = startZ - 20
+	while z > endZ + 20 do
 		for _, side in { -1, 1 } do
-			local h = rng:NextNumber(22, 40)
-			local w = rng:NextNumber(14, 24)
-			local x = side * (half - rng:NextNumber(10, 40))
-			local spike = Parts.wedge(
-				map,
-				"Underside",
-				Vector3.new(w, h, w),
-				CFrame.new(x, FLOOR_TOP - FLOOR_THICKNESS - UNDERSIDE_THICKNESS - h / 2 + 6, z)
-					* CFrame.Angles(math.pi, rng:NextNumber(0, math.pi * 2), 0),
-				ISLAND_UNDER,
-				Enum.Material.Slate
+			local r = rng:NextNumber(12, 22)
+			local x = side * (half - rng:NextNumber(14, 50))
+			Terrain.Ball(
+				Vector3.new(x, FLOOR_TOP - FLOOR_THICKNESS - UNDERSIDE_THICKNESS - r * 0.4, z),
+				r,
+				Enum.Material.Rock
 			)
-			Parts.noCollide(spike)
 		end
-		z -= 48
+		z -= 40
 	end
 
 	local function capEdge(edgeZ: number)
-		local x = -half + 8
-		while x < half - 8 do
-			local size = rng:NextNumber(14, 26)
-			Props.rock(
-				map,
-				Vector3.new(x + rng:NextNumber(-6, 6), FLOOR_TOP - size * 0.4, edgeZ),
+		local x = -half + 6
+		while x < half - 6 do
+			local size = rng:NextNumber(16, 28)
+			Terrain.Boulder(
+				Vector3.new(x + rng:NextNumber(-6, 6), FLOOR_TOP - size * 0.3, edgeZ + rng:NextNumber(-3, 3)),
 				size,
-				rng,
-				ISLAND_ROCK
+				Enum.Material.Rock,
+				rng
 			)
-			x += 26
+			x += 24
 		end
 	end
 	if isFirst then
-		capEdge(startZ - 2)
+		capEdge(startZ + 2)
 	end
 	if isLast then
-		capEdge(endZ + 2)
+		capEdge(endZ - 2)
 	end
 end
 
@@ -165,7 +140,7 @@ local function buildSignPost(map: Folder, zone: Config.Zone, z: number)
 	Parts.sign(post, `{zone.Name}  x{zone.Multiplier}`, 9, 260)
 end
 
--- An ice wall across the zone entrance with a melting door in the middle.
+-- Glacier walls across the zone entrance with a melting ice door in the middle.
 local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Zone, startZ: number, width: number)
 	local gate = Parts.model(map, `Gate{index}`)
 	local height = Config.IceWallHeight
@@ -174,28 +149,37 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 
 	for _, side in { -1, 1 } do
 		local cx = side * (GATE_DOOR_WIDTH / 2 + sideWidth / 2)
-		local slab = Parts.block(
-			gate,
-			"IceSide",
-			Vector3.new(sideWidth, height + 6, GATE_THICKNESS),
-			CFrame.new(cx, FLOOR_TOP + (height + 6) / 2, startZ),
-			ICE_DEEP,
-			Enum.Material.Ice
+		Terrain.Block(
+			CFrame.new(cx, FLOOR_TOP + (height + 8) / 2, startZ),
+			Vector3.new(sideWidth + 2, height + 8, GATE_THICKNESS + 2),
+			Enum.Material.Glacier
 		)
-		slab.Transparency = 0.3
-
+		-- Ice lumps along the top and foot so the wall is not a flat slab.
+		for _ = 1, 6 do
+			local x = side * rng:NextNumber(GATE_DOOR_WIDTH / 2 + 8, half - 6)
+			Terrain.Ball(
+				Vector3.new(x, FLOOR_TOP + height + 6, startZ + rng:NextNumber(-3, 3)),
+				rng:NextNumber(5, 10),
+				Enum.Material.Glacier
+			)
+			Terrain.Ball(
+				Vector3.new(x, FLOOR_TOP + rng:NextNumber(0, 4), startZ + rng:NextNumber(3, 9)),
+				rng:NextNumber(4, 8),
+				Enum.Material.Ice
+			)
+		end
 		for _ = 1, 7 do
 			local x = side * rng:NextNumber(GATE_DOOR_WIDTH / 2 + 6, half - 8)
 			Props.crystal(
 				gate,
-				Vector3.new(x, FLOOR_TOP + height + 4, startZ + rng:NextNumber(-2, 2)),
+				Vector3.new(x, FLOOR_TOP + height + 8, startZ + rng:NextNumber(-2, 2)),
 				rng:NextNumber(10, 24),
 				rng
 			)
 		end
 		for _ = 1, 5 do
 			local x = side * rng:NextNumber(GATE_DOOR_WIDTH / 2 + 4, half - 10)
-			Props.crystal(gate, Vector3.new(x, FLOOR_TOP, startZ + rng:NextNumber(5, 14)), rng:NextNumber(6, 16), rng)
+			Props.crystal(gate, Vector3.new(x, FLOOR_TOP, startZ + rng:NextNumber(8, 16)), rng:NextNumber(6, 16), rng)
 		end
 	end
 
@@ -205,9 +189,10 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 		Vector3.new(GATE_DOOR_WIDTH + 10, 8, GATE_THICKNESS + 2),
 		CFrame.new(0, FLOOR_TOP + height + 4, startZ),
 		ICE_DEEP,
-		Enum.Material.Ice
+		Enum.Material.Glass
 	)
-	lintel.Transparency = 0.25
+	lintel.Transparency = 0.3
+	lintel.Reflectance = 0.15
 	for _, x in { -GATE_DOOR_WIDTH / 2 - 2, 0, GATE_DOOR_WIDTH / 2 + 2 } do
 		Props.crystal(gate, Vector3.new(x, FLOOR_TOP + height + 8, startZ), rng:NextNumber(10, 18), rng)
 	end
@@ -218,9 +203,10 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 		Vector3.new(GATE_DOOR_WIDTH, height, GATE_THICKNESS - 1),
 		CFrame.new(0, FLOOR_TOP + height / 2, startZ),
 		ICE,
-		Enum.Material.Ice
+		Enum.Material.Glass
 	)
-	door.Transparency = 0.2
+	door.Transparency = 0.25
+	door.Reflectance = 0.1
 	door:SetAttribute("ZoneIndex", index)
 	door:SetAttribute("RequiredFire", zone.RequiredFire)
 	CollectionService:AddTag(door, "IceWall")
@@ -295,14 +281,24 @@ function Builder.Build(): Folder
 
 	local rng = Random.new(Config.MapSeed)
 	local width = Config.ZoneWidth
-	local cursorZ = 0
 	local zoneCount = #Config.Zones
 
+	local totalLength = 0
+	for _, zone in Config.Zones do
+		totalLength += zone.Length
+	end
+
+	-- Clear any terrain in the island's volume so the build is deterministic.
+	Terrain.Clear(Vector3.new(0, FLOOR_TOP - 40, -totalLength / 2), Vector3.new(width + 120, 260, totalLength + 120))
+	Terrain.EnableDecoration()
+
+	local cursorZ = 0
 	for index, zone in Config.Zones do
 		local startZ = cursorZ
 		local endZ = cursorZ - zone.Length
 
 		buildFloor(map, index, zone, startZ, endZ, width)
+		buildCliffs(rng, startZ, endZ, width, index == 1, index == zoneCount)
 
 		local zoneFolder = Instance.new("Folder")
 		zoneFolder.Name = `Zone{index}_{zone.Name:gsub(" ", "")}`
@@ -320,7 +316,6 @@ function Builder.Build(): Folder
 			Parent = zoneFolder,
 		})
 
-		buildCliffs(map, rng, startZ, endZ, width, index == 1, index == zoneCount)
 		buildSignPost(map, zone, startZ - 18)
 		if index > 1 then
 			buildGate(map, rng, index, zone, startZ, width)
@@ -329,7 +324,7 @@ function Builder.Build(): Folder
 		cursorZ = endZ
 	end
 
-	buildRails(map, width, -cursorZ)
+	buildRails(map, width, totalLength)
 
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
@@ -353,7 +348,7 @@ function Builder.Build(): Folder
 			partCount += 1
 		end
 	end
-	print(`[MapGen] Built {zoneCount} zones, {-cursorZ} studs long, {partCount} parts`)
+	print(`[MapGen] Built {zoneCount} zones, {totalLength} studs long, {partCount} parts plus terrain`)
 
 	return map
 end
