@@ -1,6 +1,6 @@
 --!strict
--- On-screen Fire counter. Built in code for now; reads leaderstats and the
--- FirePerClick attribute, both replicated by Roblox, so it needs no remotes.
+-- On-screen Fire counter. Built in code for now; reads leaderstats and player
+-- attributes, all replicated by Roblox, so it needs no remotes.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +27,11 @@ local function makeLabel(name: string, size: UDim2, position: UDim2, textSize: n
 	return label
 end
 
+local function numberAttribute(name: string, default: number): number
+	local value = localPlayer:GetAttribute(name)
+	return if typeof(value) == "number" then value else default
+end
+
 function Hud.Init()
 	local playerGui = localPlayer:WaitForChild("PlayerGui")
 
@@ -43,6 +48,10 @@ function Hud.Init()
 		makeLabel("PerClick", UDim2.fromOffset(400, 30), UDim2.new(0.5, 0, 0, 84), 22, Color3.new(1, 1, 1))
 	perClickLabel.Parent = screen
 
+	local zoneLabel =
+		makeLabel("Zone", UDim2.fromOffset(400, 30), UDim2.new(0.5, 0, 0, 112), 20, Color3.fromRGB(150, 210, 255))
+	zoneLabel.Parent = screen
+
 	local hint =
 		makeLabel("Hint", UDim2.fromOffset(500, 30), UDim2.new(0.5, 0, 1, -60), 20, Color3.fromRGB(220, 220, 220))
 	hint.Text = "Click or tap anywhere to breathe fire"
@@ -54,15 +63,24 @@ function Hud.Init()
 		fireLabel.Text = `{Format.Short(value)} Fire`
 	end
 
-	local function updatePerClick()
-		local value = localPlayer:GetAttribute("FirePerClick")
-		local amount = if typeof(value) == "number" then value else Config.BaseFirePerClick
-		perClickLabel.Text = `+{Format.Short(amount)} per click`
+	local function updateClickInfo()
+		local perClick = numberAttribute("FirePerClick", Config.BaseFirePerClick)
+		local multiplier = numberAttribute("ZoneMultiplier", 1)
+		perClickLabel.Text = `+{Format.Short(perClick * multiplier)} per click`
+
+		local zoneName = localPlayer:GetAttribute("ZoneName")
+		if typeof(zoneName) == "string" and zoneName ~= "" then
+			zoneLabel.Text = `{zoneName}  x{multiplier}`
+		else
+			zoneLabel.Text = ""
+		end
 	end
 
 	updateFire(0)
-	updatePerClick()
-	localPlayer:GetAttributeChangedSignal("FirePerClick"):Connect(updatePerClick)
+	updateClickInfo()
+	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName" } do
+		localPlayer:GetAttributeChangedSignal(name):Connect(updateClickInfo)
+	end
 
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats", 30)

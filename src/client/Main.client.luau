@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local ClickInput = require(script.Parent.ClickInput)
 local FireEffects = require(script.Parent.FireEffects)
 local Hud = require(script.Parent.Hud)
+local IceWalls = require(script.Parent.IceWalls)
 
 local localPlayer = Players.LocalPlayer
 
@@ -37,6 +38,7 @@ end
 print(`[{Config.GameName}] client starting`)
 
 Hud.Init()
+IceWalls.Init()
 ClickInput.Init()
 
 Players.PlayerAdded:Connect(watchOtherPlayer)

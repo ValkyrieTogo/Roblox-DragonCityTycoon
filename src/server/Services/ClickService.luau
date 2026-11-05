@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local StatService = require(script.Parent.StatService)
+local ZoneService = require(script.Parent.ZoneService)
 
 local ClickService = {}
 
@@ -40,11 +41,16 @@ local function takeToken(player: Player): boolean
 	return true
 end
 
+-- What one click is worth for this player right now.
+function ClickService.GetClickValue(player: Player): number
+	return StatService.GetFirePerClick(player) * ZoneService.GetMultiplier(player)
+end
+
 local function onClick(player: Player)
 	if not takeToken(player) then
 		return
 	end
-	StatService.AddFire(player, StatService.GetFirePerClick(player))
+	StatService.AddFire(player, ClickService.GetClickValue(player))
 end
 
 function ClickService.Init()

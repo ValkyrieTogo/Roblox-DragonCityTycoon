@@ -31,9 +31,14 @@ local function takeToken(): boolean
 	return true
 end
 
-local function firePerClick(): number
-	local value = localPlayer:GetAttribute("FirePerClick")
-	return if typeof(value) == "number" then value else Config.BaseFirePerClick
+local function numberAttribute(name: string, default: number): number
+	local value = localPlayer:GetAttribute(name)
+	return if typeof(value) == "number" then value else default
+end
+
+-- Mirrors ClickService.GetClickValue so the popup matches what the server adds.
+local function predictedClickValue(): number
+	return numberAttribute("FirePerClick", Config.BaseFirePerClick) * numberAttribute("ZoneMultiplier", 1)
 end
 
 local function onClick()
@@ -45,7 +50,7 @@ local function onClick()
 
 	local character = localPlayer.Character
 	if character then
-		FireEffects.Burst(character, firePerClick())
+		FireEffects.Burst(character, predictedClickValue())
 	end
 end
 
