@@ -275,7 +275,24 @@ local function disableOtherSpawns(keep: SpawnLocation)
 	end
 end
 
+-- Runs one build stage, reporting a failure instead of aborting the map, and
+-- yields afterwards so the generator never trips Studio's script timeout.
+local function stage(name: string, work: () -> ())
+	local ok, err = pcall(function()
+		work()
+		return nil
+	end)
+	if not ok then
+		warn(`[MapGen] {name} failed: {err}`)
+	end
+	task.wait()
+end
+
+-- Builds the ground, zone sensors, spawn and rails right away so players
+-- spawn on the island and zones work, then dresses the island in the
+-- background one stage at a time.
 function Builder.Build(): Folder
+	local started = os.clock()
 	local map = Instance.new("Folder")
 	map.Name = "Map"
 
@@ -292,36 +309,14 @@ function Builder.Build(): Folder
 	Terrain.Clear(Vector3.new(0, FLOOR_TOP - 40, -totalLength / 2), Vector3.new(width + 120, 260, totalLength + 120))
 	Terrain.EnableDecoration()
 
+	type Lane = { Index: number, Zone: Config.Zone, StartZ: number, EndZ: number }
+	local lanes: { Lane } = {}
 	local cursorZ = 0
 	for index, zone in Config.Zones do
-		local startZ = cursorZ
-		local endZ = cursorZ - zone.Length
-
-		buildFloor(map, index, zone, startZ, endZ, width)
-		buildCliffs(rng, startZ, endZ, width, index == 1, index == zoneCount)
-
-		local zoneFolder = Instance.new("Folder")
-		zoneFolder.Name = `Zone{index}_{zone.Name:gsub(" ", "")}`
-		zoneFolder.Parent = map
-		Zones.Decorate({
-			Index = index,
-			Zone = zone,
-			Width = width,
-			Length = zone.Length,
-			StartZ = startZ,
-			EndZ = endZ,
-			CenterZ = (startZ + endZ) / 2,
-			Top = FLOOR_TOP,
-			Rng = rng,
-			Parent = zoneFolder,
-		})
-
-		buildSignPost(map, zone, startZ - 18)
-		if index > 1 then
-			buildGate(map, rng, index, zone, startZ, width)
-		end
-
-		cursorZ = endZ
+		local lane = { Index = index, Zone = zone, StartZ = cursorZ, EndZ = cursorZ - zone.Length }
+		table.insert(lanes, lane)
+		buildFloor(map, index, zone, lane.StartZ, lane.EndZ, width)
+		cursorZ = lane.EndZ
 	end
 
 	buildRails(map, width, totalLength)
@@ -341,14 +336,55 @@ function Builder.Build(): Folder
 	map.Parent = Workspace
 	hideBaseplate()
 	disableOtherSpawns(spawn)
+	print(
+		`[MapGen] Ground ready for {zoneCount} zones, {totalLength} studs long, in {math.round(
+			(os.clock() - started) * 1000
+		)} ms`
+	)
 
-	local partCount = 0
-	for _, instance in map:GetDescendants() do
-		if instance:IsA("BasePart") then
-			partCount += 1
+	task.spawn(function()
+		for _, lane in lanes do
+			local index, zone = lane.Index, lane.Zone
+			stage(`Zone {index} cliffs`, function()
+				buildCliffs(rng, lane.StartZ, lane.EndZ, width, index == 1, index == zoneCount)
+			end)
+
+			local zoneFolder = Instance.new("Folder")
+			zoneFolder.Name = `Zone{index}_{zone.Name:gsub(" ", "")}`
+			zoneFolder.Parent = map
+			stage(`Zone {index} scenery`, function()
+				Zones.Decorate({
+					Index = index,
+					Zone = zone,
+					Width = width,
+					Length = zone.Length,
+					StartZ = lane.StartZ,
+					EndZ = lane.EndZ,
+					CenterZ = (lane.StartZ + lane.EndZ) / 2,
+					Top = FLOOR_TOP,
+					Rng = rng,
+					Parent = zoneFolder,
+				})
+			end)
+
+			stage(`Zone {index} sign and gate`, function()
+				buildSignPost(map, zone, lane.StartZ - 18)
+				if index > 1 then
+					buildGate(map, rng, index, zone, lane.StartZ, width)
+				end
+			end)
 		end
-	end
-	print(`[MapGen] Built {zoneCount} zones, {totalLength} studs long, {partCount} parts plus terrain`)
+
+		local partCount = 0
+		for _, instance in map:GetDescendants() do
+			if instance:IsA("BasePart") then
+				partCount += 1
+			end
+		end
+		print(
+			`[MapGen] Map complete: {partCount} parts plus terrain, in {math.round((os.clock() - started) * 1000)} ms`
+		)
+	end)
 
 	return map
 end
