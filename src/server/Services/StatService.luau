@@ -64,7 +64,7 @@ function StatService.SetFirePerClick(player: Player, amount: number)
 	player:SetAttribute("FirePerClick", math.max(math.floor(amount), 1))
 end
 
--- Fires with (player, newFire) whenever Fire changes. Used by DragonService.
+-- Calls back with the new Fire whenever it changes. Used by GrowthService.
 function StatService.OnFireChanged(player: Player, callback: (number) -> ()): RBXScriptConnection?
 	local fire = getFireValue(player)
 	if not fire then

@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local CameraScale = require(script.Parent.CameraScale)
 local ClickInput = require(script.Parent.ClickInput)
 local FireEffects = require(script.Parent.FireEffects)
 local Hud = require(script.Parent.Hud)
@@ -13,7 +14,7 @@ local IceWalls = require(script.Parent.IceWalls)
 local localPlayer = Players.LocalPlayer
 
 -- Other players' breaths: their Fire going up means they clicked, so play the
--- effect on their dragon. The local player's effect is played on input instead.
+-- effect on their character. The local player's effect is played on input instead.
 local function watchOtherPlayer(player: Player)
 	if player == localPlayer then
 		return
@@ -38,6 +39,7 @@ end
 print(`[{Config.GameName}] client starting`)
 
 Hud.Init()
+CameraScale.Init()
 IceWalls.Init()
 ClickInput.Init()
 

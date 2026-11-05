@@ -7,7 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local StatService = require(script.Parent.Services.StatService)
 local ZoneService = require(script.Parent.Services.ZoneService)
 local ClickService = require(script.Parent.Services.ClickService)
-local DragonService = require(script.Parent.Services.DragonService)
+local GrowthService = require(script.Parent.Services.GrowthService)
 
 print(`[{Config.GameName}] server starting`)
 
@@ -16,6 +16,6 @@ print(`[{Config.GameName}] server starting`)
 StatService.Init()
 ZoneService.Init()
 ClickService.Init()
-DragonService.Init()
+GrowthService.Init()
 
 print(`[{Config.GameName}] server ready`)

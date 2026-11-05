@@ -1,7 +1,7 @@
 --!strict
--- Plays the fire breath effect on a dragon. Client only: the server never
--- touches effects, it just changes numbers. The burst grows with the dragon
--- so a hatchling puffs a spark and a titan floods the screen.
+-- Plays the fire breath effect from a character's mouth. Client only: the
+-- server never touches effects, it just changes numbers. The burst grows with
+-- the character so a hatchling puffs a spark and a titan floods the screen.
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,11 +18,11 @@ local GLOW_SECONDS = 0.12
 local POPUP_SECONDS = 0.8
 
 local function findMouth(character: Model): Attachment?
-	local dragon = character:FindFirstChild("Dragon")
-	if not dragon or not dragon:IsA("Model") then
+	local head = character:FindFirstChild("Head")
+	if not head then
 		return nil
 	end
-	local mouth = dragon:FindFirstChild("Mouth", true)
+	local mouth = head:FindFirstChild("Mouth")
 	return if mouth and mouth:IsA("Attachment") then mouth else nil
 end
 
@@ -55,7 +55,7 @@ local function showPopup(mouth: Attachment, amount: number, scale: number)
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.fromOffset(120, 40)
-	billboard.StudsOffsetWorldSpace = Vector3.new(0, 1.5 * scale, 0)
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, 2 * scale, 0)
 	billboard.AlwaysOnTop = true
 	billboard.LightInfluence = 0
 
@@ -71,10 +71,9 @@ local function showPopup(mouth: Attachment, amount: number, scale: number)
 
 	billboard.Parent = part
 
-	local tween = TweenService:Create(billboard, TweenInfo.new(POPUP_SECONDS, Enum.EasingStyle.Quad), {
-		StudsOffsetWorldSpace = Vector3.new(0, 4 * scale, 0),
-	})
-	tween:Play()
+	TweenService:Create(billboard, TweenInfo.new(POPUP_SECONDS, Enum.EasingStyle.Quad), {
+		StudsOffsetWorldSpace = Vector3.new(0, 5 * scale, 0),
+	}):Play()
 	TweenService:Create(label, TweenInfo.new(POPUP_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		TextTransparency = 1,
 		TextStrokeTransparency = 1,
@@ -82,15 +81,14 @@ local function showPopup(mouth: Attachment, amount: number, scale: number)
 	Debris:AddItem(billboard, POPUP_SECONDS)
 end
 
--- One breath from this character's dragon, worth `amount` Fire.
+-- One breath from this character, worth `amount` Fire.
 function FireEffects.Burst(character: Model, amount: number)
 	local mouth = findMouth(character)
 	if not mouth then
 		return
 	end
 
-	local dragon = mouth:FindFirstAncestorOfClass("Model")
-	local scale = if dragon then dragon:GetScale() else 1
+	local scale = character:GetScale()
 
 	local flame = mouth:FindFirstChild("Flame")
 	if flame and flame:IsA("ParticleEmitter") then

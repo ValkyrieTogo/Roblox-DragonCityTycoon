@@ -22,7 +22,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DevMap = {}
 
 local FLOOR_THICKNESS = 1
-local SIDE_WALL_HEIGHT = 24
+local SIDE_WALL_HEIGHT = 60
 
 local function makePart(name: string, size: Vector3, cframe: CFrame, color: Color3): Part
 	local part = Instance.new("Part")
@@ -154,8 +154,8 @@ function DevMap.Build(): Folder
 	local pad = Instance.new("Part")
 	pad.Name = "WinPad"
 	pad.Shape = Enum.PartType.Cylinder
-	pad.Size = Vector3.new(0.4, 12, 12)
-	pad.CFrame = CFrame.new(0, topY + 0.2, -totalLength + 10) * CFrame.Angles(0, 0, math.rad(90))
+	pad.Size = Vector3.new(0.4, 24, 24)
+	pad.CFrame = CFrame.new(0, topY + 0.2, -totalLength + 16) * CFrame.Angles(0, 0, math.rad(90))
 	pad.Color = Color3.fromRGB(255, 200, 80)
 	pad.Material = Enum.Material.Neon
 	pad.Anchored = true
@@ -165,8 +165,8 @@ function DevMap.Build(): Folder
 	-- Spawn at the start of the Hatchery.
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
-	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.CFrame = CFrame.new(0, topY + 0.5, -10)
+	spawn.Size = Vector3.new(12, 1, 12)
+	spawn.CFrame = CFrame.new(0, topY + 0.5, -16)
 	spawn.Color = Color3.fromRGB(120, 200, 120)
 	spawn.Anchored = true
 	spawn.Neutral = true
