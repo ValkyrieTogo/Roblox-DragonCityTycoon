@@ -39,7 +39,7 @@ local THRONE_STONE = Color3.fromRGB(150, 122, 70)
 
 -- Terrain materials per zone name: the ground and the centre path.
 Zones.FloorMaterial = {
-	["Hatchery"] = Enum.Material.Grass,
+	["Hatchery"] = Enum.Material.LeafyGrass, -- Grass grows tall blades with Decoration on; LeafyGrass stays flat
 	["Campfire"] = Enum.Material.Ground,
 	["Lava Pit"] = Enum.Material.Basalt,
 	["Volcano"] = Enum.Material.Slate,

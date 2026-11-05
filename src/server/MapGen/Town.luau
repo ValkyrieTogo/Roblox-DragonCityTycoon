@@ -858,7 +858,7 @@ function Town.BuildGround(map: Folder)
 	local center = Config.TownCenter
 	local radius = Config.TownRadius
 	Terrain.Clear(center + Vector3.new(0, -40, 0), Vector3.new(radius * 2 + 120, 260, radius * 2 + 120))
-	Terrain.Column(center + Vector3.new(0, -FLOOR_THICKNESS / 2, 0), FLOOR_THICKNESS, radius, Enum.Material.Grass)
+	Terrain.Column(center + Vector3.new(0, -FLOOR_THICKNESS / 2, 0), FLOOR_THICKNESS, radius, Enum.Material.LeafyGrass)
 	Terrain.Column(center + Vector3.new(0, -2, 0), 4, PLAZA_RADIUS, Enum.Material.Pavement)
 	-- Paths out of the plaza: north to the gate, east, west and south.
 	for _, dir in { Vector3.new(0, 0, -1), Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1) } do

@@ -3,8 +3,8 @@
 -- smooth, naturally shaded ground with real materials (grass blades, glowing
 -- cracked lava, rock, glacier ice), which parts cannot match. Voxels are 4
 -- studs, so shapes are sized and placed on that grid where it matters.
--- Grass blades (Terrain.Decoration) can only be enabled by hand in Studio:
--- select Terrain in the Explorer and tick Decoration. Scripts may not set it.
+-- Ground uses LeafyGrass, not Grass: with Terrain.Decoration on, Grass grows
+-- tall blades that hide eggs and dummies, and scripts cannot shorten them.
 
 local Workspace = game:GetService("Workspace")
 
