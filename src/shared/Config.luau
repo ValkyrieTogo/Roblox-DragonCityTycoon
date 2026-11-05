@@ -27,10 +27,17 @@ function Config.DragonScale(fire: number): number
 	return math.clamp(scale, 1, Config.MaxDragonScale)
 end
 
--- Movement at scale 1. Bigger dragons walk a little faster and jump higher.
+-- Movement at scale 1. Bigger dragons walk a little faster. Dragons do not
+-- jump: Space takes off instead (see Flight), so jump strength is zero.
 Config.BaseWalkSpeed = 16
-Config.BaseJumpHeight = 7.2
-Config.BaseJumpPower = 50
+Config.BaseJumpHeight = 0
+Config.BaseJumpPower = 0
+
+-- Flight at scale 1, studs per second; scaled by the square root of the
+-- dragon's size like walking. Hold Space to climb, release to sink.
+Config.FlySpeed = 34
+Config.FlyClimbSpeed = 22
+Config.FlySinkSpeed = 7
 
 -- Camera distance limits at scale 1, multiplied by the dragon's scale so a big
 -- dragon does not fill the screen.

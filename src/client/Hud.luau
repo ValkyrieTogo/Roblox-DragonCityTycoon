@@ -181,12 +181,15 @@ function Hud.Init()
 			zoneLabel.Text = ""
 		end
 
-		if localPlayer:GetAttribute("Training") == true then
+		if localPlayer:GetAttribute("Flying") == true then
+			hint.Text = "Flying!  Hold Space to climb, release to glide down"
+			hint.TextColor3 = Color3.fromRGB(150, 210, 255)
+		elseif localPlayer:GetAttribute("Training") == true then
 			local perSecond = clickValue * Config.TrainingClicksPerTick / Config.TrainingTick
 			hint.Text = `Training!  +{Format.Short(perSecond)} Fire per second`
 			hint.TextColor3 = Color3.fromRGB(255, 170, 40)
 		else
-			hint.Text = "Click or tap anywhere to breathe fire"
+			hint.Text = "Click or tap anywhere to breathe fire.  Space to fly"
 			hint.TextColor3 = Color3.fromRGB(220, 220, 220)
 		end
 	end
@@ -194,7 +197,7 @@ function Hud.Init()
 	updateFire(0)
 	updateWins(0)
 	updateClickInfo()
-	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName", "WinMultiplier", "Training" } do
+	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName", "WinMultiplier", "Training", "Flying" } do
 		localPlayer:GetAttributeChangedSignal(name):Connect(updateClickInfo)
 	end
 	watchStat("Fire", updateFire)

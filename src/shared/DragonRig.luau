@@ -15,6 +15,8 @@ DragonRig.ModelHeight = 1.7
 DragonRig.MouthBone = "Bone_039"
 DragonRig.MouthOffset = Vector3.new(0, -0.24, -0.3)
 
+-- Root of the whole skeleton; tilting it pitches the entire dragon.
+DragonRig.Root = "Bone_000"
 DragonRig.Hips = "Bone_001"
 DragonRig.Neck = "Bone_043"
 DragonRig.Head = "Bone_040"

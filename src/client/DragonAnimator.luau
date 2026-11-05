@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local DragonRig = require(ReplicatedStorage.Shared.DragonRig)
+local Flight = require(script.Parent.Flight)
 
 local DragonAnimator = {}
 
@@ -25,6 +26,13 @@ local WING_FOLD_WALK = 0.1 -- extra when walking
 local WING_ELBOW_FOLD = 0.35 -- forearm down further, hugging the flank
 local WING_ELBOW_SWEEP = 0.35 -- forearm back along the body
 local WING_TIP = 0.25 -- outer segments curled down
+
+-- Flying: wings spread near the rest pose and beat about it.
+local FLAP_LIFT = 0.1 -- shoulder held a little above rest
+local FLAP_SWING = 0.5 -- beat amplitude at the shoulder
+local FLAP_RATE = 7 -- radians per second at scale 1, slower for big dragons
+local FLY_BLEND_RATE = 4 -- how fast the pose crosses between folded and flying
+local FLY_LEG_TUCK = 0.7 -- legs drawn back under the body
 
 -- A bone plus the mesh's axes expressed in the bone's own space, so a swing
 -- "about the body's sideways axis" is the same call for every bone.
@@ -47,9 +55,12 @@ type Rig = {
 	Neck: Driven?,
 	Head: Driven?,
 	Hips: Driven?,
+	Body: Driven?,
 	Phase: number, -- so dragons do not flap in unison
 	Stride: number, -- accumulated walk cycle, in cycles
 	Flap: number, -- accumulated wing cycle, in radians
+	Fly: number, -- 0 on the ground, 1 in the air, blended between
+	IsLocal: boolean, -- the local player's own dragon
 }
 
 local rigs: { [Model]: Rig } = {}
@@ -94,14 +105,39 @@ local function swing(driven: Driven, axis: Vector3, angle: number)
 	driven.Bone.Transform = CFrame.fromAxisAngle(axis, angle)
 end
 
+local function lerp(a: number, b: number, t: number): number
+	return a + (b - a) * t
+end
+
+-- Whether this dragon is off the ground. The local player's own uses the
+-- flight controller; everyone else is judged by a short ray under the feet.
+local function airborne(rig: Rig, scale: number): boolean
+	if rig.IsLocal then
+		return Flight.IsFlying()
+	end
+	local root = rig.Root
+	if not root then
+		return false
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { rig.Model }
+	return Workspace:Raycast(root.Position, Vector3.new(0, -(3 * scale + 2.5), 0), params) == nil
+end
+
 local function animate(rig: Rig, dt: number, now: number)
 	local root = rig.Root
 	local speed = 0
+	local verticalSpeed = 0
 	if root then
 		local velocity = root.AssemblyLinearVelocity
 		speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+		verticalSpeed = velocity.Y
 	end
 	local scale = rig.Model:GetScale()
+	local flyTarget = if airborne(rig, scale) then 1 else 0
+	rig.Fly = lerp(rig.Fly, flyTarget, math.min(dt * FLY_BLEND_RATE, 1))
+	local fly = rig.Fly
 	local unit = rig.Mesh.Size.Y / DragonRig.ModelHeight -- model units to studs
 	-- 0 standing, 1 at a normal walk, a little more when sprinting.
 	local walk = math.clamp(speed / (16 * math.sqrt(scale)), 0, 1.4)
@@ -109,33 +145,46 @@ local function animate(rig: Rig, dt: number, now: number)
 	local stride = rig.Stride * math.pi * 2
 	local t = now + rig.Phase
 
-	-- Wings: held folded down and swept back along the body, lower still when
-	-- walking, with a soft breathing lift. The phase accumulates so a change
-	-- of speed never snaps the angle.
-	rig.Flap += dt * (1.6 + 1.2 * walk)
+	-- Wings. On the ground: folded down and swept back along the body, lower
+	-- still when walking, with a soft breathing lift. In the air: spread and
+	-- beating, each segment lagging the one before. The phase accumulates so
+	-- a change of speed never snaps the angle, and the two poses blend.
+	rig.Flap += dt * lerp(1.6 + 1.2 * walk, FLAP_RATE / math.sqrt(scale), fly)
 	local breathe = math.sin(rig.Flap) * (0.035 + 0.03 * walk)
 	local fold = WING_FOLD + WING_FOLD_WALK * walk + breathe
 	local sweep = WING_SWEEP + 0.1 * walk
+	local beat = math.sin(rig.Flap)
 	for _, wing in rig.Wings do
 		for i, segment in wing do
 			local side = segment.Side
 			if i == 1 then
 				-- Shoulder: back about the body's up axis, then down about its forward axis.
-				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, -fold * side)
-					* CFrame.fromAxisAngle(segment.AxisY, -sweep * side)
+				local down = lerp(-fold, FLAP_LIFT + FLAP_SWING * beat, fly)
+				local back = lerp(-sweep, -0.15, fly)
+				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, down * side)
+					* CFrame.fromAxisAngle(segment.AxisY, back * side)
 			elseif i == 2 then
-				-- Elbow: keeps going down and back so the forearm lies along the flank.
-				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, -(WING_ELBOW_FOLD + breathe * 0.5) * side)
-					* CFrame.fromAxisAngle(segment.AxisY, -WING_ELBOW_SWEEP * side)
+				-- Elbow: folded it hugs the flank; flying it lags the shoulder's beat.
+				local down = lerp(-(WING_ELBOW_FOLD + breathe * 0.5), 0.35 * math.sin(rig.Flap - 0.8) - 0.05, fly)
+				local back = lerp(-WING_ELBOW_SWEEP, 0, fly)
+				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, down * side)
+					* CFrame.fromAxisAngle(segment.AxisY, back * side)
 			else
-				swing(segment, segment.AxisZ, -WING_TIP * side)
+				swing(segment, segment.AxisZ, lerp(-WING_TIP, 0.25 * math.sin(rig.Flap - 1.4), fly) * side)
 			end
 		end
 	end
 
-	-- Tail: a wave travelling down the chain, side to side with a little lift.
+	-- Body: pitch the whole dragon with its climb or dive while flying.
+	if rig.Body then
+		local pitch = math.clamp(verticalSpeed / 30, -0.35, 0.35) - 0.1 * math.min(speed / 20, 1)
+		swing(rig.Body, rig.Body.AxisX, pitch * fly)
+	end
+
+	-- Tail: a wave travelling down the chain, side to side with a little lift,
+	-- straighter in the air.
 	for i, segment in rig.Tail do
-		local sway = math.sin(t * 1.8 - i * 0.45) * (0.09 + 0.05 * walk)
+		local sway = math.sin(t * 1.8 - i * 0.45) * (0.09 + 0.05 * walk) * (1 - 0.6 * fly)
 		local lift = math.sin(t * 1.1 - i * 0.3) * 0.03
 		segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisY, sway) * CFrame.fromAxisAngle(segment.AxisX, lift)
 	end
@@ -149,9 +198,10 @@ local function animate(rig: Rig, dt: number, now: number)
 			end
 			local phase = if (upper.Side > 0) == isFront then 0 else math.pi
 			local s = math.sin(stride + phase)
-			swing(upper, upper.AxisX, s * 0.5 * walk)
+			-- Striding on the ground, drawn back under the body in the air.
+			swing(upper, upper.AxisX, lerp(s * 0.5 * walk, -FLY_LEG_TUCK, fly))
 			if lower then
-				swing(lower, lower.AxisX, math.max(0, -s) * 0.6 * walk)
+				swing(lower, lower.AxisX, lerp(math.max(0, -s) * 0.6 * walk, 0.5, fly))
 			end
 		end
 	end
@@ -160,7 +210,7 @@ local function animate(rig: Rig, dt: number, now: number)
 
 	-- Neck and head: breathing bob, a nod with each stride.
 	if rig.Neck then
-		swing(rig.Neck, rig.Neck.AxisX, math.sin(t * 1.6) * 0.04 + math.sin(stride * 2) * 0.03 * walk)
+		swing(rig.Neck, rig.Neck.AxisX, math.sin(t * 1.6) * 0.04 + math.sin(stride * 2) * 0.03 * walk - 0.15 * fly)
 	end
 	if rig.Head then
 		swing(rig.Head, rig.Head.AxisX, math.sin(t * 1.6 + 1) * 0.04)
@@ -207,9 +257,12 @@ local function track(model: Model)
 			Neck = find(mesh, DragonRig.Neck),
 			Head = find(mesh, DragonRig.Head),
 			Hips = find(mesh, DragonRig.Hips),
+			Body = find(mesh, DragonRig.Root),
 			Phase = rng:NextNumber(0, 10),
 			Stride = rng:NextNumber(0, 1),
 			Flap = rng:NextNumber(0, math.pi * 2),
+			Fly = 0,
+			IsLocal = model == Players.LocalPlayer.Character,
 		}
 		local rig = rigs[model]
 		if rig then
