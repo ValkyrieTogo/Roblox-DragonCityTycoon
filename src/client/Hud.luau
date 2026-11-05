@@ -186,7 +186,7 @@ function Hud.Init()
 			hint.TextColor3 = Color3.fromRGB(150, 210, 255)
 		elseif localPlayer:GetAttribute("Training") == true then
 			local perSecond = clickValue * Config.TrainingClicksPerTick / Config.TrainingTick
-			hint.Text = `Training!  +{Format.Short(perSecond)} Fire per second`
+			hint.Text = `Training!  +{Format.Short(perSecond)} Fire per second.  Space to leave`
 			hint.TextColor3 = Color3.fromRGB(255, 170, 40)
 		else
 			hint.Text = "Click or tap anywhere to breathe fire.  Space to fly"

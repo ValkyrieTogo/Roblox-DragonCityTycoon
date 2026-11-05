@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Training = require(script.Parent.Training)
 
 local Flight = {}
 
@@ -87,6 +88,7 @@ local function takeOff(boost: boolean)
 	if flying or not model or not root or not humanoid or humanoid.Health <= 0 then
 		return
 	end
+	Training.Release() -- a dragon held at a dummy lets go to fly off
 	setFlying(true)
 	humanoid.AutoRotate = false
 

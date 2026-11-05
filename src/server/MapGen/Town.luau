@@ -994,20 +994,20 @@ function Town.Decorate(map: Folder, rng: Random)
 	end
 
 	-- South-east: the training pen and the green circle.
-	fence(folder, 52, 98, 54, 92, "north")
-	for _, x in { 62, 75, 88 } do
-		Props.trainingDummy(folder, at(x, 76), at(x, 40), 1, rng)
+	fence(folder, 38, 128, 40, 108, "north")
+	for _, x in { 56, 83, 110 } do
+		Props.trainingDummy(folder, at(x, 92), at(x, 40), 1, rng, 1.3)
 	end
 	local pen = Parts.block(
 		folder,
 		"PenSign",
 		Vector3.new(0.8, 6, 0.8),
-		CFrame.new(at(50, 50) + Vector3.new(0, 3, 0)),
+		CFrame.new(at(36, 36) + Vector3.new(0, 3, 0)),
 		DARK_WOOD,
 		Enum.Material.Wood
 	)
 	Parts.sign(pen, "Training Pen\nStand by a dummy to breathe on it", 5, 240)
-	local green = magicCircle(folder, at(118, 118), 7, GREEN, "Pet Arena\nComing soon")
+	local green = magicCircle(folder, at(132, 128), 7, GREEN, "Pet Arena\nComing soon")
 	local greenPrompt = Instance.new("ProximityPrompt")
 	greenPrompt.ActionText = "Enter"
 	greenPrompt.ObjectText = "Pet Arena"

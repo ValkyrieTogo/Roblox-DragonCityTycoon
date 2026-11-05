@@ -816,12 +816,21 @@ end
 
 local SCORCH = Color3.fromRGB(28, 24, 22)
 local BASALT = Color3.fromRGB(48, 44, 48)
+local PAD_RADIUS = 5 -- before the dummy's scale
+local PAD_DISTANCE = 9.5 -- pad centre in front of the dummy, before scale
 
 -- A target players breathe fire on. Tier 1 is a straw-wrapped log on a
 -- stump, tier 2 a carved basalt totem with a glowing dragon face, tier 3 the
 -- same totem gilded. Tagged TrainingDummy; the server lights its Blaze while
 -- someone trains on it.
-function Props.trainingDummy(parent: Instance, position: Vector3, faceToward: Vector3, tier: number, rng: Random): Model
+function Props.trainingDummy(
+	parent: Instance,
+	position: Vector3,
+	faceToward: Vector3,
+	tier: number,
+	rng: Random,
+	scale: number?
+): Model
 	local model = Parts.model(parent, "TrainingDummy")
 	local yaw = yawToward(position, faceToward)
 	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
@@ -952,7 +961,60 @@ function Props.trainingDummy(parent: Instance, position: Vector3, faceToward: Ve
 	Parts.fire(core, 5, 12).Enabled = false
 	Parts.light(core, LAVA_LIGHT, 20, 2).Enabled = false
 
+	-- The training pad: a glowing ring on the ground in front of the dummy.
+	-- Standing on it is what starts training. Its light joins the blaze.
+	local padCenter = (base * CFrame.new(0, 0, -PAD_DISTANCE)).Position
+	local pad = Parts.model(model, "TrainingPad")
+	local outer = Parts.disc(
+		pad,
+		"Outer",
+		PAD_RADIUS + 1.2,
+		0.25,
+		padCenter + Vector3.new(0, 0.12, 0),
+		DARK_STONE,
+		Enum.Material.Slate
+	)
+	Parts.noCollide(outer)
+	local glow = Parts.disc(pad, "Pad", PAD_RADIUS, 0.3, padCenter + Vector3.new(0, 0.2, 0), LAVA, Enum.Material.Neon)
+	glow.Transparency = 0.45
+	Parts.noCollide(glow)
+	local inner = Parts.disc(
+		pad,
+		"Inner",
+		PAD_RADIUS * 0.55,
+		0.32,
+		padCenter + Vector3.new(0, 0.2, 0),
+		DARK_STONE,
+		Enum.Material.Slate
+	)
+	Parts.noCollide(inner)
+	for i = 1, 8 do
+		local a = i / 8 * math.pi * 2
+		local rune = Parts.block(
+			pad,
+			"Rune",
+			Vector3.new(0.7, 0.36, 1.4),
+			CFrame.new(padCenter + Vector3.new(math.cos(a) * PAD_RADIUS * 0.78, 0.2, math.sin(a) * PAD_RADIUS * 0.78))
+				* CFrame.Angles(0, -a, 0),
+			LAVA_LIGHT,
+			Enum.Material.Neon
+		)
+		Parts.noCollide(rune)
+	end
+	local padBlaze = Parts.block(pad, "Blaze", Vector3.new(1, 1, 1), CFrame.new(padCenter + Vector3.new(0, 1, 0)), LAVA)
+	Parts.invisible(padBlaze)
+	Parts.light(padBlaze, LAVA_LIGHT, PAD_RADIUS * 3, 2).Enabled = false
+	Parts.sign(glow, "Stand here to train", 4, 220, LAVA_LIGHT)
+
 	model.PrimaryPart = body
+	if scale and scale ~= 1 then
+		model.WorldPivot = CFrame.new(position)
+		model:ScaleTo(scale)
+		local fire = core:FindFirstChildOfClass("Fire")
+		if fire then
+			fire.Size = 5 * scale
+		end
+	end
 	CollectionService:AddTag(model, "TrainingDummy")
 	return model
 end

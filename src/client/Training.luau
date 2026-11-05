@@ -1,30 +1,31 @@
 --!strict
--- Presentation of auto-breathing. The server sets the Training attribute
--- while the local player stands at a dummy; this turns the dragon to face
--- the nearest dummy when standing still and plays a breath with the
--- predicted Fire every tick, in step with the server's awards.
+-- Presentation of training. The server sets the Training attribute while
+-- the local player stands on a dummy's pad, with TrainingSpot and
+-- TrainingTarget saying where. This snaps the dragon to the pad centre
+-- facing the dummy, holds it there, and plays a breath with the predicted
+-- Fire every tick, in step with the server's awards. Space (flight) lets go.
 
-local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local FireEffects = require(script.Parent.FireEffects)
 
 local Training = {}
 
-local TAG = "TrainingDummy"
-local TURN_RATE = 10 -- how quickly the dragon turns toward the dummy
-
 local localPlayer = Players.LocalPlayer
 
 local active = false
-local target: Vector3? = nil
+local held = false -- the root is anchored on the pad
 
 local function numberAttribute(name: string, default: number): number
 	local value = localPlayer:GetAttribute(name)
 	return if typeof(value) == "number" then value else default
+end
+
+local function vectorAttribute(name: string): Vector3?
+	local value = localPlayer:GetAttribute(name)
+	return if typeof(value) == "Vector3" then value else nil
 end
 
 -- Mirrors ClickService.GetClickValue times the clicks per training tick.
@@ -33,23 +34,6 @@ local function predictedValue(): number
 	local zone = numberAttribute("ZoneMultiplier", 1)
 	local wins = numberAttribute("WinMultiplier", 1)
 	return math.floor(perClick * zone * wins) * Config.TrainingClicksPerTick
-end
-
-local function nearestDummy(from: Vector3): Vector3?
-	local best: Vector3? = nil
-	local bestDistance = math.huge
-	for _, instance in CollectionService:GetTagged(TAG) do
-		if not (instance:IsA("Model") or instance:IsA("BasePart")) then
-			continue
-		end
-		local position = instance:GetPivot().Position
-		local distance = (position - from).Magnitude
-		if distance < bestDistance then
-			best = position
-			bestDistance = distance
-		end
-	end
-	return best
 end
 
 local function character(): (Model?, BasePart?, Humanoid?)
@@ -62,34 +46,46 @@ local function character(): (Model?, BasePart?, Humanoid?)
 	return model, if root and root:IsA("BasePart") then root else nil, humanoid
 end
 
-local function setAutoRotate(enabled: boolean)
-	local _, _, humanoid = character()
-	if humanoid then
-		humanoid.AutoRotate = enabled
+-- Stands the dragon on the pad centre, facing the dummy, and anchors it.
+local function hold()
+	local _, root, humanoid = character()
+	local spot = vectorAttribute("TrainingSpot")
+	local target = vectorAttribute("TrainingTarget")
+	if not root or not humanoid or not spot or not target then
+		return
 	end
+	local position = Vector3.new(spot.X, root.Position.Y, spot.Z)
+	local look = Vector3.new(target.X, position.Y, target.Z)
+	if (look - position).Magnitude > 0.5 then
+		root.CFrame = CFrame.lookAt(position, look)
+	else
+		root.CFrame = CFrame.new(position) * root.CFrame.Rotation
+	end
+	root.AssemblyLinearVelocity = Vector3.zero
+	humanoid.AutoRotate = false
+	root.Anchored = true
+	held = true
 end
 
--- Turns the dragon toward the dummy while it stands still, so the breath
--- lands on the target instead of wherever it was last walking.
-local function faceTarget(dt: number)
+-- Lets the dragon move again. Called when training ends and before flight.
+function Training.Release()
+	if not held then
+		return
+	end
+	held = false
 	local _, root, humanoid = character()
-	if not root or not humanoid or not target or humanoid.MoveDirection.Magnitude > 0 then
-		return
+	if root then
+		root.Anchored = false
 	end
-	local position = root.Position
-	local look = Vector3.new(target.X, position.Y, target.Z)
-	if (look - position).Magnitude < 0.5 then
-		return
+	if humanoid then
+		humanoid.AutoRotate = true
 	end
-	local goal = CFrame.lookAt(position, look)
-	root.CFrame = root.CFrame:Lerp(goal, math.min(dt * TURN_RATE, 1))
 end
 
 local function breathLoop()
 	while active do
-		local model, root = character()
-		if model and root then
-			target = nearestDummy(root.Position)
+		local model = character()
+		if model and held then
 			FireEffects.Burst(model, predictedValue())
 		end
 		task.wait(Config.TrainingTick)
@@ -103,25 +99,19 @@ local function update()
 	end
 	active = now
 	if active then
-		setAutoRotate(false)
+		hold()
 		task.spawn(breathLoop)
 	else
-		target = nil
-		setAutoRotate(true)
+		Training.Release()
 	end
 end
 
 function Training.Init()
 	localPlayer:GetAttributeChangedSignal("Training"):Connect(update)
 	localPlayer.CharacterAdded:Connect(function()
-		-- A fresh character has AutoRotate on; the server will re-flag training.
+		-- A fresh character is free; the server will re-flag training.
 		active = false
-		target = nil
-	end)
-	RunService.Heartbeat:Connect(function(dt)
-		if active then
-			faceTarget(dt)
-		end
+		held = false
 	end)
 	update()
 end

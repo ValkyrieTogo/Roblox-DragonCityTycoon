@@ -32,6 +32,8 @@ local PATH_HALF = Config.PathWidth / 2
 local EDGE_MARGIN = 24
 local END_MARGIN = 40
 
+local DUMMY_SCALE = 1.8 -- arena dummies are built for grown dragons
+
 local ASH_ROCK = Color3.fromRGB(70, 62, 62)
 local EMBER = Color3.fromRGB(255, 150, 50)
 local GOLD = Color3.fromRGB(235, 190, 60)
@@ -129,31 +131,32 @@ end
 -- the path side and the zone's trainer at the head of the row.
 local function trainingYard(r: Region, side: number, fraction: number, count_: number)
 	local f = r.Parent
-	local x = side * (PATH_HALF + 20)
-	local spacing = 12
+	local dummyScale = DUMMY_SCALE
+	local x = side * (PATH_HALF + 44) -- dummies stand back; their pads reach toward the path
+	local spacing = 30
 	local headZ = along(r, fraction)
 	local tailZ = headZ - (count_ - 1) * spacing
 	local tier = if r.Index <= 2 then 1 elseif r.Index <= 4 then 2 else 3
 
 	for i = 0, count_ - 1 do
 		local z = headZ - i * spacing
-		Props.trainingDummy(f, ground(r, x, z), ground(r, 0, z), tier, r.Rng)
+		Props.trainingDummy(f, ground(r, x, z), ground(r, 0, z), tier, r.Rng, dummyScale)
 	end
-	Props.torch(f, ground(r, x + side * 7, headZ + 9), 7)
-	Props.torch(f, ground(r, x + side * 7, tailZ - 9), 7)
+	Props.torch(f, ground(r, x + side * 10, headZ + 16), 12)
+	Props.torch(f, ground(r, x + side * 10, tailZ - 16), 12)
 
 	local post = Parts.block(
 		f,
 		"YardSign",
-		Vector3.new(0.8, 6, 0.8),
-		CFrame.new(ground(r, side * (PATH_HALF + 5), headZ + 10) + Vector3.new(0, 3, 0)),
+		Vector3.new(1, 9, 1),
+		CFrame.new(ground(r, side * (PATH_HALF + 6), headZ + 18) + Vector3.new(0, 4.5, 0)),
 		Color3.fromRGB(66, 44, 28),
 		Enum.Material.Wood
 	)
-	Parts.sign(post, "Training Yard\nStand by a dummy to breathe on it", 5, 240)
+	Parts.sign(post, "Training Yard\nStand on a ring to breathe on its dummy", 8, 300)
 
-	Props.npcSpawn(f, ground(r, x + side * 9, headZ + 15), ground(r, x, headZ - spacing), "Trainer", r.Index)
-	reserve(side * (PATH_HALF + 2), x + side * 20, headZ + 24, tailZ - 16)
+	Props.npcSpawn(f, ground(r, x + side * 12, headZ + 22), ground(r, x, headZ - spacing), "Trainer", r.Index)
+	reserve(side * (PATH_HALF + 2), x + side * 24, headZ + 30, tailZ - 22)
 end
 
 local decorators: { [string]: (Region) -> () } = {}

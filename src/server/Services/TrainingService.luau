@@ -1,14 +1,17 @@
 --!strict
--- Auto-breathing. A player standing near a training dummy breathes on it
--- without clicking: every Config.TrainingTick seconds they gain a click's
--- worth of Fire, at their current click value, times
--- Config.TrainingClicksPerTick. Server-authoritative: the client only
--- decorates. Dummies are any Model or BasePart tagged "TrainingDummy"; a
--- descendant named "Blaze" holding a Fire and PointLight is lit while
--- someone trains on it.
+-- Auto-breathing at training dummies. Every dummy (a Model or BasePart
+-- tagged "TrainingDummy") has a pad in front of it: a descendant BasePart
+-- named "Pad", whose footprint is the trigger. A player standing on a pad
+-- trains on that dummy: every Config.TrainingTick seconds they gain a
+-- click's worth of Fire at their current click value, times
+-- Config.TrainingClicksPerTick, while the dummy's "Blaze" effects burn.
+-- The client holds the dragon on the pad facing the dummy; Space lets go.
+-- A dummy without a Pad falls back to Config.TrainingRadius around itself.
 --
--- Player attribute, replicated for the HUD and the breath effect:
---   Training  boolean, true while standing at a dummy
+-- Player attributes, replicated for the HUD and the client:
+--   Training        boolean, true while on a pad
+--   TrainingSpot    Vector3, the pad centre to stand on
+--   TrainingTarget  Vector3, the dummy to face
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -21,10 +24,11 @@ local StatService = require(script.Parent.StatService)
 local TrainingService = {}
 
 local TAG = "TrainingDummy"
-local HEIGHT_ALLOWANCE = 30 -- a giant dragon's root sits well above a dummy
+local HEIGHT_ALLOWANCE = 30 -- a giant dragon's root sits well above the pad
+local LEAVING_SPEED = 3 -- rising faster than this means the player is flying off
 
 type Effect = Fire | PointLight
-type Dummy = { Position: Vector3, Effects: { Effect }, Lit: boolean }
+type Dummy = { Target: Vector3, Spot: Vector3, Radius: number, Effects: { Effect }, Lit: boolean }
 
 local dummies: { [Instance]: Dummy } = {}
 
@@ -33,13 +37,23 @@ local function register(instance: Instance)
 		return
 	end
 	local effects: { Effect } = {}
+	local pad: BasePart? = nil
 	for _, descendant in instance:GetDescendants() do
 		local holder = descendant.Parent
 		if (descendant:IsA("Fire") or descendant:IsA("PointLight")) and holder and holder.Name == "Blaze" then
 			table.insert(effects, descendant)
+		elseif descendant:IsA("BasePart") and descendant.Name == "Pad" then
+			pad = descendant
 		end
 	end
-	dummies[instance] = { Position = instance:GetPivot().Position, Effects = effects, Lit = false }
+	local target = instance:GetPivot().Position
+	dummies[instance] = {
+		Target = target,
+		Spot = if pad then pad.Position else target,
+		Radius = if pad then math.max(pad.Size.X, pad.Size.Z) / 2 else Config.TrainingRadius,
+		Effects = effects,
+		Lit = false,
+	}
 end
 
 local function unregister(instance: Instance)
@@ -60,16 +74,17 @@ local function setLit(dummy: Dummy, lit: boolean)
 	end
 end
 
-local function nearestDummy(position: Vector3): Dummy?
+-- The dummy whose pad the player stands on, if any.
+local function padUnder(position: Vector3): Dummy?
 	local best: Dummy? = nil
-	local bestDistance = Config.TrainingRadius
+	local bestDistance = math.huge
 	for _, dummy in dummies do
-		local delta = dummy.Position - position
+		local delta = dummy.Spot - position
 		if math.abs(delta.Y) > HEIGHT_ALLOWANCE then
 			continue
 		end
 		local distance = Vector3.new(delta.X, 0, delta.Z).Magnitude
-		if distance < bestDistance then
+		if distance <= dummy.Radius and distance < bestDistance then
 			best = dummy
 			bestDistance = distance
 		end
@@ -85,15 +100,22 @@ local function tick()
 		local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
 		local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
 		local alive = humanoid ~= nil and humanoid.Health > 0
-		local dummy = if root and root:IsA("BasePart") and alive then nearestDummy(root.Position) else nil
+		local dummy: Dummy? = nil
+		if root and root:IsA("BasePart") and alive and root.AssemblyLinearVelocity.Y < LEAVING_SPEED then
+			dummy = padUnder(root.Position)
+		end
 
 		local training = dummy ~= nil
-		if player:GetAttribute("Training") ~= training then
-			player:SetAttribute("Training", training)
-		end
 		if dummy then
+			if player:GetAttribute("TrainingSpot") ~= dummy.Spot then
+				player:SetAttribute("TrainingSpot", dummy.Spot)
+				player:SetAttribute("TrainingTarget", dummy.Target)
+			end
 			active[dummy] = true
 			StatService.AddFire(player, ClickService.GetClickValue(player) * Config.TrainingClicksPerTick)
+		end
+		if player:GetAttribute("Training") ~= training then
+			player:SetAttribute("Training", training)
 		end
 	end
 
