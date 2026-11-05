@@ -76,6 +76,57 @@ local function showWinBanner(screen: ScreenGui, wins: number)
 	end)
 end
 
+local toastScreen: ScreenGui? = nil
+local toastLabel: TextLabel? = nil
+local toastToken = 0
+
+local function ensureToast(screen: ScreenGui): TextLabel
+	local existing = toastLabel
+	if existing then
+		return existing
+	end
+	local label = makeLabel("Toast", UDim2.fromOffset(640, 70), UDim2.new(0.5, 0, 0.62, 0), 24, Color3.new(1, 1, 1))
+	label.TextWrapped = true
+	label.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+	label.BackgroundTransparency = 0.3
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = label
+	label.Parent = screen
+	toastLabel = label
+	return label
+end
+
+-- A short message in the middle of the screen that fades after a moment.
+function Hud.Toast(text: string)
+	local screen = toastScreen
+	if not screen then
+		return
+	end
+	local label = ensureToast(screen)
+	toastToken += 1
+	local token = toastToken
+	label.Text = text
+	label.TextTransparency = 0
+	label.TextStrokeTransparency = 0.4
+	label.BackgroundTransparency = 0.3
+	label.Visible = true
+	task.delay(3, function()
+		if token ~= toastToken then
+			return
+		end
+		local fade = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		TweenService
+			:Create(label, fade, { TextTransparency = 1, TextStrokeTransparency = 1, BackgroundTransparency = 1 })
+			:Play()
+		task.delay(0.5, function()
+			if token == toastToken then
+				label.Visible = false
+			end
+		end)
+	end)
+end
+
 function Hud.Init()
 	local playerGui = localPlayer:WaitForChild("PlayerGui")
 
@@ -106,6 +157,7 @@ function Hud.Init()
 	hint.Parent = screen
 
 	screen.Parent = playerGui
+	toastScreen = screen
 
 	local function updateFire(value: number)
 		fireLabel.Text = `{Format.Short(value)} Fire`

@@ -713,7 +713,7 @@ function Props.goldPile(parent: Instance, position: Vector3, radius: number, rng
 end
 
 -- The dragon throne. `cframe` is the ground centre of the bottom step; it faces its -Z.
-function Props.throne(parent: Instance, cframe: CFrame)
+function Props.throne(parent: Instance, cframe: CFrame, scale: number?)
 	local model = Parts.model(parent, "Throne")
 	local steps = { Vector3.new(30, 2, 16), Vector3.new(24, 2, 12), Vector3.new(18, 2, 9) }
 	local y = 0
@@ -758,6 +758,10 @@ function Props.throne(parent: Instance, cframe: CFrame)
 	end
 	Props.torch(model, (cframe * CFrame.new(-17, 0, -4)).Position, 9)
 	Props.torch(model, (cframe * CFrame.new(17, 0, -4)).Position, 9)
+	if scale and scale ~= 1 then
+		model.WorldPivot = cframe
+		model:ScaleTo(scale)
+	end
 end
 
 -- Ice -----------------------------------------------------------------------

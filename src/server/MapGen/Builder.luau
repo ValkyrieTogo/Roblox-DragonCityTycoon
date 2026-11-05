@@ -22,6 +22,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Parts = require(script.Parent.Parts)
 local Props = require(script.Parent.Props)
 local Terrain = require(script.Parent.Terrain)
+local Town = require(script.Parent.Town)
 local Zones = require(script.Parent.Zones)
 
 local Builder = {}
@@ -29,9 +30,9 @@ local Builder = {}
 local FLOOR_TOP = 0 -- Y of the walkable surface, on the 4-stud terrain grid
 local FLOOR_THICKNESS = 16
 local UNDERSIDE_THICKNESS = 28
-local RAIL_HEIGHT = 160
-local PATH_WIDTH = 28
-local GATE_DOOR_WIDTH = 40
+local RAIL_HEIGHT = 320
+local PATH_WIDTH = Config.PathWidth
+local GATE_DOOR_WIDTH = Config.GateDoorWidth
 local GATE_THICKNESS = 6
 
 local ICE = Color3.fromRGB(170, 220, 255)
@@ -155,7 +156,7 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 			Enum.Material.Glacier
 		)
 		-- Ice lumps along the top and foot so the wall is not a flat slab.
-		for _ = 1, 6 do
+		for _ = 1, math.max(6, math.floor(sideWidth / 16)) do
 			local x = side * rng:NextNumber(GATE_DOOR_WIDTH / 2 + 8, half - 6)
 			Terrain.Ball(
 				Vector3.new(x, FLOOR_TOP + height + 6, startZ + rng:NextNumber(-3, 3)),
@@ -168,18 +169,18 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 				Enum.Material.Ice
 			)
 		end
-		for _ = 1, 7 do
+		for _ = 1, math.max(7, math.floor(sideWidth / 14)) do
 			local x = side * rng:NextNumber(GATE_DOOR_WIDTH / 2 + 6, half - 8)
 			Props.crystal(
 				gate,
 				Vector3.new(x, FLOOR_TOP + height + 8, startZ + rng:NextNumber(-2, 2)),
-				rng:NextNumber(10, 24),
+				rng:NextNumber(14, 34),
 				rng
 			)
 		end
-		for _ = 1, 5 do
+		for _ = 1, math.max(5, math.floor(sideWidth / 20)) do
 			local x = side * rng:NextNumber(GATE_DOOR_WIDTH / 2 + 4, half - 10)
-			Props.crystal(gate, Vector3.new(x, FLOOR_TOP, startZ + rng:NextNumber(8, 16)), rng:NextNumber(6, 16), rng)
+			Props.crystal(gate, Vector3.new(x, FLOOR_TOP, startZ + rng:NextNumber(8, 16)), rng:NextNumber(8, 22), rng)
 		end
 	end
 
@@ -194,7 +195,7 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 	lintel.Transparency = 0.3
 	lintel.Reflectance = 0.15
 	for _, x in { -GATE_DOOR_WIDTH / 2 - 2, 0, GATE_DOOR_WIDTH / 2 + 2 } do
-		Props.crystal(gate, Vector3.new(x, FLOOR_TOP + height + 8, startZ), rng:NextNumber(10, 18), rng)
+		Props.crystal(gate, Vector3.new(x, FLOOR_TOP + height + 8, startZ), rng:NextNumber(14, 26), rng)
 	end
 
 	local door = Parts.block(
@@ -223,8 +224,8 @@ local function buildGate(map: Folder, rng: Random, index: number, zone: Config.Z
 	Parts.noCollide(glow)
 	Parts.light(glow, Color3.fromRGB(255, 150, 50), 40, 2)
 
-	Props.torch(gate, Vector3.new(-GATE_DOOR_WIDTH / 2 - 5, FLOOR_TOP, startZ + 7), 9)
-	Props.torch(gate, Vector3.new(GATE_DOOR_WIDTH / 2 + 5, FLOOR_TOP, startZ + 7), 9)
+	Props.torch(gate, Vector3.new(-GATE_DOOR_WIDTH / 2 - 5, FLOOR_TOP, startZ + 7), 14)
+	Props.torch(gate, Vector3.new(GATE_DOOR_WIDTH / 2 + 5, FLOOR_TOP, startZ + 7), 14)
 end
 
 local function buildRails(map: Folder, width: number, totalLength: number)
@@ -270,8 +271,29 @@ local function disableOtherSpawns(keep: SpawnLocation)
 	for _, instance in Workspace:GetDescendants() do
 		if instance:IsA("SpawnLocation") and instance ~= keep and instance.Enabled then
 			instance.Enabled = false
-			warn(`[MapGen] Disabled spawn {instance:GetFullName()} so players start in the Hatchery`)
+			warn(`[MapGen] Disabled spawn {instance:GetFullName()} so players start in the town`)
 		end
+	end
+end
+
+-- A glowing circle at the arena's start that sends players back to town.
+local function buildReturnPortal(map: Folder)
+	local model = Parts.model(map, "ReturnPortal")
+	local position = Vector3.new(0, FLOOR_TOP, -16)
+	local color = Color3.fromRGB(150, 70, 220)
+	local outer = Parts.disc(model, "Outer", 9, 0.25, position + Vector3.new(0, 0.12, 0), POST, Enum.Material.Slate)
+	Parts.noCollide(outer)
+	local glow = Parts.disc(model, "Glow", 8, 0.3, position + Vector3.new(0, 0.2, 0), color, Enum.Material.Neon)
+	glow.Transparency = 0.35
+	Parts.noCollide(glow)
+	glow.CanTouch = true
+	glow:SetAttribute("Destination", "TownGate")
+	CollectionService:AddTag(glow, "Portal")
+	Parts.light(glow, color, 24, 1.5)
+	Parts.motes(glow, 12, color, 0.5)
+	Parts.sign(glow, "Back to Town", 6, 220, color)
+	for _, x in { -11, 11 } do
+		Props.torch(model, Vector3.new(x, FLOOR_TOP, -16), 8)
 	end
 end
 
@@ -305,43 +327,50 @@ function Builder.Build(): Folder
 		totalLength += zone.Length
 	end
 
-	-- Clear any terrain in the island's volume so the build is deterministic.
-	Terrain.Clear(Vector3.new(0, FLOOR_TOP - 40, -totalLength / 2), Vector3.new(width + 120, 260, totalLength + 120))
-
 	type Lane = { Index: number, Zone: Config.Zone, StartZ: number, EndZ: number }
 	local lanes: { Lane } = {}
 	local cursorZ = 0
 	for index, zone in Config.Zones do
 		local lane = { Index = index, Zone = zone, StartZ = cursorZ, EndZ = cursorZ - zone.Length }
 		table.insert(lanes, lane)
+		-- Clear any terrain in the zone's volume so the build is deterministic.
+		Terrain.Clear(
+			Vector3.new(0, FLOOR_TOP - 40, (lane.StartZ + lane.EndZ) / 2),
+			Vector3.new(width + 120, 260, zone.Length + (if index == 1 or index == zoneCount then 120 else 0))
+		)
 		buildFloor(map, index, zone, lane.StartZ, lane.EndZ, width)
 		cursorZ = lane.EndZ
 	end
 
 	buildRails(map, width, totalLength)
+	Town.BuildGround(map)
 
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "Spawn"
-	spawn.Size = Vector3.new(14, 1, 14)
-	spawn.CFrame = CFrame.new(0, FLOOR_TOP + 0.5, -30)
-	spawn.Color = Color3.fromRGB(120, 200, 120)
-	spawn.Material = Enum.Material.Grass
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = 0
-	spawn.TopSurface = Enum.SurfaceType.Smooth
-	spawn.Parent = map
+	-- Arrival pad from the town, just inside the Hatchery, facing down the arena.
+	local arrival =
+		Parts.block(map, "ArenaArrival", Vector3.new(4, 2, 4), CFrame.new(0, FLOOR_TOP + 1, -44), Color3.new(1, 1, 1))
+	Parts.invisible(arrival)
+	arrival:SetAttribute("Name", "Arena")
+	CollectionService:AddTag(arrival, "PortalArrival")
 
 	map.Parent = Workspace
 	hideBaseplate()
-	disableOtherSpawns(spawn)
+	local spawn = map:FindFirstChild("Spawn")
+	if spawn and spawn:IsA("SpawnLocation") then
+		disableOtherSpawns(spawn)
+	end
 	print(
-		`[MapGen] Ground ready for {zoneCount} zones, {totalLength} studs long, in {math.round(
+		`[MapGen] Ground ready for the town and {zoneCount} zones, {totalLength} studs long, in {math.round(
 			(os.clock() - started) * 1000
 		)} ms`
 	)
 
 	task.spawn(function()
+		stage("Town", function()
+			Town.Decorate(map, Random.new(Config.MapSeed + 2))
+		end)
+		stage("Arena entrance", function()
+			buildReturnPortal(map)
+		end)
 		for _, lane in lanes do
 			local index, zone = lane.Index, lane.Zone
 			stage(`Zone {index} cliffs`, function()

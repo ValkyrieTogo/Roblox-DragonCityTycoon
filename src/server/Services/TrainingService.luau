@@ -21,7 +21,7 @@ local StatService = require(script.Parent.StatService)
 local TrainingService = {}
 
 local TAG = "TrainingDummy"
-local HEIGHT_ALLOWANCE = 14
+local HEIGHT_ALLOWANCE = 30 -- a giant dragon's root sits well above a dummy
 
 type Effect = Fire | PointLight
 type Dummy = { Position: Vector3, Effects: { Effect }, Lit: boolean }

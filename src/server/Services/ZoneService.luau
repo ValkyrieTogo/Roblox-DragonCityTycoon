@@ -23,7 +23,7 @@ local StatService = require(script.Parent.StatService)
 local ZoneService = {}
 
 local SCAN_INTERVAL = 0.2 -- seconds between position checks
-local HEIGHT_ALLOWANCE = 160 -- how far above a floor a player still counts as in the zone (volcano top)
+local HEIGHT_ALLOWANCE = 260 -- how far above a floor a player still counts as in the zone (volcano top)
 
 type ZoneBox = { Index: number, Min: Vector3, Max: Vector3 }
 

@@ -35,7 +35,7 @@ Config.BaseJumpPower = 50
 -- Camera distance limits at scale 1, multiplied by the dragon's scale so a big
 -- dragon does not fill the screen.
 Config.CameraMinZoom = 8
-Config.CameraMaxZoom = 80
+Config.CameraMaxZoom = 120
 
 -- Zones, in order along the map. Each zone is a training ground: clicks made
 -- inside it are worth Multiplier times more, but only once the player has
@@ -50,21 +50,29 @@ export type Zone = {
 }
 
 Config.Zones = {
-	{ Name = "Hatchery", Multiplier = 1, RequiredFire = 0, Length = 340, Color = Color3.fromRGB(96, 160, 72) },
-	{ Name = "Campfire", Multiplier = 2, RequiredFire = 50, Length = 380, Color = Color3.fromRGB(125, 90, 58) },
-	{ Name = "Lava Pit", Multiplier = 5, RequiredFire = 500, Length = 440, Color = Color3.fromRGB(44, 38, 40) },
-	{ Name = "Volcano", Multiplier = 20, RequiredFire = 5000, Length = 520, Color = Color3.fromRGB(58, 48, 48) },
+	{ Name = "Hatchery", Multiplier = 1, RequiredFire = 0, Length = 820, Color = Color3.fromRGB(96, 160, 72) },
+	{ Name = "Campfire", Multiplier = 2, RequiredFire = 50, Length = 900, Color = Color3.fromRGB(125, 90, 58) },
+	{ Name = "Lava Pit", Multiplier = 5, RequiredFire = 500, Length = 1060, Color = Color3.fromRGB(44, 38, 40) },
+	{ Name = "Volcano", Multiplier = 20, RequiredFire = 5000, Length = 1240, Color = Color3.fromRGB(58, 48, 48) },
 	{
 		Name = "Dragon Throne",
 		Multiplier = 50,
 		RequiredFire = 50000,
-		Length = 380,
+		Length = 900,
 		Color = Color3.fromRGB(205, 165, 75),
 	},
 } :: { Zone }
 
-Config.ZoneWidth = 220
-Config.IceWallHeight = 30
+-- The arena is sized for many dragons at MaxDragonScale (about 25 studs tall).
+Config.ZoneWidth = 560
+Config.PathWidth = 60
+Config.GateDoorWidth = 100
+Config.IceWallHeight = 60
+
+-- The hub town is its own floating island south of the arena. Players spawn
+-- there and reach the arena through the gate portal.
+Config.TownCenter = Vector3.new(0, 0, 480)
+Config.TownRadius = 170
 -- Seed for the code-built map so it is the same every server.
 Config.MapSeed = 7
 -- Hide the template Baseplate so the island appears to float.
@@ -144,7 +152,7 @@ end
 -- fire on it automatically: every TrainingTick seconds the player gains
 -- TrainingClicksPerTick clicks' worth of Fire at their current click value.
 -- Idle income, slower than clicking by hand, so clicking still matters.
-Config.TrainingRadius = 16
+Config.TrainingRadius = 20
 Config.TrainingTick = 0.5
 Config.TrainingClicksPerTick = 1
 
@@ -201,6 +209,76 @@ Config.Trainers = {
 		},
 	},
 } :: { [string]: NpcSpeech }
+
+-- Townsfolk keyed by the Speech attribute of their spawn.
+Config.Townsfolk = {
+	["Gacha"] = {
+		Name = "Mina",
+		Lines = {
+			"Eggs from every zone! Hatching opens soon.",
+			"A pet dragon will follow you and share its Fire.",
+			"The rarer the egg, the hotter the hatchling.",
+		},
+	},
+	["SkillShop"] = {
+		Name = "Orrin",
+		Lines = {
+			"Breath, Fangs, Inferno. Browse at the counter.",
+			"Every level adds to each breath. Buy early, buy often.",
+			"Your upgrades reset on a Win, but the Win is forever.",
+		},
+	},
+	["Inn"] = {
+		Name = "Tansy",
+		Lines = {
+			"Welcome to the Ember Inn! Mind the chimney.",
+			"The arena is through the north gate.",
+			"Big dragons get a bigger room. That is the rule.",
+		},
+	},
+} :: { [string]: NpcSpeech }
+
+Config.Walkers = {
+	{ Name = "Bram", Lines = { "Fine day on the island.", "Heard the throne pays fifty times." } },
+	{ Name = "Lio", Lines = { "I train at the pen every morning.", "The lava pit is too hot for me." } },
+	{ Name = "Wren", Lines = { "Have you seen the fountain eggs glow?", "Portals tickle my scales." } },
+	{ Name = "Dax", Lines = { "I almost reached the volcano once.", "Keep clicking, friend." } },
+} :: { NpcSpeech }
+
+-- Townsfolk keyed by the Speech attribute of their spawn.
+Config.Townsfolk = {
+	["Gacha"] = {
+		Name = "Mina",
+		Lines = {
+			"Eggs from every zone! Hatching opens soon.",
+			"A pet dragon will follow you and share its Fire.",
+			"The rarer the egg, the hotter the hatchling.",
+		},
+	},
+	["SkillShop"] = {
+		Name = "Orrin",
+		Lines = {
+			"Breath, Fangs, Inferno. Browse at the counter.",
+			"Every level adds to each breath. Buy early, buy often.",
+			"Your upgrades reset on a Win, but the Win is forever.",
+		},
+	},
+	["Inn"] = {
+		Name = "Tansy",
+		Lines = {
+			"Welcome to the Ember Inn! Mind the chimney.",
+			"The arena is through the north gate.",
+			"Big dragons get a bigger room. That is the rule.",
+		},
+	},
+} :: { [string]: NpcSpeech }
+
+Config.Walkers = {
+	{ Name = "Bram", Lines = { "Fine day on the island.", "Heard the throne pays fifty times." } },
+	{ Name = "Lio", Lines = { "I train at the pen every morning.", "The lava pit is too hot for me." } },
+	{ Name = "Wren", Lines = { "Have you seen the fountain eggs glow?", "Portals tickle my scales." } },
+	{ Name = "Dax", Lines = { "I almost reached the volcano once.", "Keep clicking, friend." } },
+} :: { NpcSpeech }
 
 Config.Villagers = {
 	{ Name = "Pip", Lines = { "I hatched yesterday!", "Can you breathe fire yet?", "Ember says click a lot." } },

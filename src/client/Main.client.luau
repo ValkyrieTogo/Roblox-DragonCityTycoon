@@ -10,6 +10,7 @@ local ClickInput = require(script.Parent.ClickInput)
 local FireEffects = require(script.Parent.FireEffects)
 local Hud = require(script.Parent.Hud)
 local IceWalls = require(script.Parent.IceWalls)
+local Prompts = require(script.Parent.Prompts)
 local Shop = require(script.Parent.Shop)
 local Training = require(script.Parent.Training)
 
@@ -46,6 +47,7 @@ CameraScale.Init()
 IceWalls.Init()
 ClickInput.Init()
 Training.Init()
+Prompts.Init()
 
 Players.PlayerAdded:Connect(watchOtherPlayer)
 for _, player in Players:GetPlayers() do

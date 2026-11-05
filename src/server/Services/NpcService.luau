@@ -1,11 +1,15 @@
 --!strict
 -- NPC dragons. Every part tagged "NpcSpawn" gets a dragon built from the R6
 -- rig and dressed with the DragonCostume, standing where the spawn faces.
--- Attributes on the spawn: Role ("Trainer" or "Villager"), ZoneIndex and
--- Seat (which villager). Trainers stand still, turn toward nearby players
--- and breathe fire at their dummies now and then. Villagers are small
--- hatchlings that wander around their spawn. All NPCs cycle through their
--- lines in a speech bubble; a Talk prompt skips to the next line.
+-- Attributes on the spawn: Role, ZoneIndex and Seat. Roles:
+--   Trainer   stands still, turns toward nearby players, breathes at its
+--             dummies now and then; speaks Config.Trainers[zone name]
+--   Keeper    stands still and turns like a trainer; speaks
+--             Config.Townsfolk by Seat order (Gacha, SkillShop, Inn)
+--   Walker    full-size townsfolk wandering near the spawn; Config.Walkers
+--   Villager  small hatchlings wandering near the spawn; Config.Villagers
+-- All NPCs cycle through their lines in a speech bubble; a Talk prompt
+-- skips to the next line.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -57,6 +61,12 @@ local function numberAttribute(instance: Instance, name: string, default: number
 	return if typeof(value) == "number" then value else default
 end
 
+local KEEPER_KEYS = { "Gacha", "SkillShop", "Inn" }
+
+local function pick(list: { Config.NpcSpeech }, seat: number): Config.NpcSpeech
+	return list[((seat - 1) % #list) + 1]
+end
+
 local function speechFor(role: string, zoneIndex: number, seat: number): Config.NpcSpeech
 	if role == "Trainer" then
 		local zone = Config.Zones[zoneIndex]
@@ -65,9 +75,17 @@ local function speechFor(role: string, zoneIndex: number, seat: number): Config.
 			return speech
 		end
 		return { Name = "Trainer", Lines = { "Breathe on the dummies to train." } }
+	elseif role == "Keeper" then
+		local key = KEEPER_KEYS[((seat - 1) % #KEEPER_KEYS) + 1]
+		return Config.Townsfolk[key] or { Name = "Keeper", Lines = { "Welcome!" } }
+	elseif role == "Walker" then
+		return pick(Config.Walkers, seat)
 	end
-	local count = #Config.Villagers
-	return Config.Villagers[((seat - 1) % count) + 1]
+	return pick(Config.Villagers, seat)
+end
+
+local function standsStill(role: string): boolean
+	return role == "Trainer" or role == "Keeper"
 end
 
 local function makeBubble(head: BasePart, name: string): TextLabel
@@ -166,6 +184,9 @@ local function spawnNpc(spawn: Instance)
 	local speech = speechFor(role, zoneIndex, seat)
 
 	local paletteIndex = if role == "Trainer" then ((zoneIndex - 1) % #PALETTES) + 1 else ((seat + 1) % #PALETTES) + 1
+	if role == "Keeper" then
+		paletteIndex = ((seat + 2) % #PALETTES) + 1
+	end
 	local model = Rig.Create(speech.Name, PALETTES[paletteIndex])
 	local root = model.PrimaryPart :: BasePart
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
@@ -179,14 +200,16 @@ local function spawnNpc(spawn: Instance)
 	humanoid.WalkSpeed = Config.NpcWalkSpeed
 	humanoid.DisplayName = speech.Name
 
-	if role == "Trainer" then
+	if standsStill(role) then
 		root.Anchored = true
 	end
 
 	model.Parent = folder
 	DragonCostume.Dress(model)
-	if role ~= "Trainer" then
+	if role == "Villager" then
 		model:ScaleTo(VILLAGER_SCALE)
+	end
+	if not standsStill(role) then
 		pcall(function()
 			root:SetNetworkOwner(nil)
 		end)
@@ -252,7 +275,7 @@ local function updateTrainer(npc: Npc, dt: number, now: number)
 	end
 	npc.Root.CFrame = npc.Root.CFrame:Lerp(goal, math.min(dt * TURN_RATE, 1))
 
-	if now >= npc.NextBreath and not playerPosition then
+	if npc.Role == "Trainer" and now >= npc.NextBreath and not playerPosition then
 		breathe(npc)
 		npc.NextBreath = now + Config.NpcBreathSeconds + rng:NextNumber(0, 3)
 	end
@@ -275,7 +298,7 @@ local function update(dt: number)
 		if now >= npc.NextLine then
 			sayNext(npc)
 		end
-		if npc.Role == "Trainer" then
+		if standsStill(npc.Role) then
 			updateTrainer(npc, dt, now)
 		else
 			updateVillager(npc, now)

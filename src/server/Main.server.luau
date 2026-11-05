@@ -17,6 +17,7 @@ local ORDER = {
 	"UpgradeService",
 	"DataService",
 	"ZoneService",
+	"PortalService",
 	"ClickService",
 	"TrainingService",
 	"GrowthService",

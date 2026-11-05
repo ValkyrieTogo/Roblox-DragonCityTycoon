@@ -73,9 +73,16 @@ but the server grants a zone's multiplier from its own Fire check.
   descendant named `Blaze` holding a `Fire` and `PointLight`; the server
   enables them while someone trains there.
 - **NPCs**: tag an invisible part `NpcSpawn` facing where the dragon should
-  look, with attributes `Role` (`Trainer` or `Villager`), `ZoneIndex` and
-  `Seat` (which villager). `NpcService` builds and animates the dragon there;
-  lines and names come from `Config.Trainers` and `Config.Villagers`.
+  look, with attributes `Role` (`Trainer`, `Keeper`, `Walker` or `Villager`),
+  `ZoneIndex` and `Seat`. `NpcService` builds and animates the dragon there;
+  names and lines come from `Config.Trainers`, `Config.Townsfolk`,
+  `Config.Walkers` and `Config.Villagers`.
+- **Portals**: tag a part `Portal` with a string attribute `Destination`, and
+  a part `PortalArrival` with attribute `Name` matching it, facing the way
+  arrivals should look. The town's gate leads to `Arena`; the circle at the
+  arena's start leads back to `Town`.
+- **Prompts**: a ProximityPrompt with a string attribute `Notice` shows that
+  text on the client; one with `Action` = `ToggleShop` opens the upgrade panel.
 - **Dragon**: `DragonCostume` welds placeholder wings, tail and horns to the
   avatar and adds `Head.Mouth` with a `Flame` emitter and `Glow` light.
   Replace the parts with meshes or accessories; the effects only need the

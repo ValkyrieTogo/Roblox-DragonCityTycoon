@@ -30,6 +30,7 @@ type Card = {
 
 local cards: { Card } = {}
 local currentFire = 0
+local panelFrame: Frame? = nil
 
 local function makeText(parent: Instance, name: string, text: string, size: UDim2, position: UDim2, textSize: number)
 	local label = Instance.new("TextLabel")
@@ -118,6 +119,14 @@ local function refreshAll()
 	end
 end
 
+-- Hides or shows the panel, for the skill shop counter in town.
+function Shop.Toggle()
+	local panel = panelFrame
+	if panel then
+		panel.Visible = not panel.Visible
+	end
+end
+
 function Shop.Init()
 	local playerGui = localPlayer:WaitForChild("PlayerGui")
 
@@ -152,6 +161,7 @@ function Shop.Init()
 
 	panel.Parent = screen
 	screen.Parent = playerGui
+	panelFrame = panel
 
 	refreshAll()
 
