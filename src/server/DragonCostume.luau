@@ -12,6 +12,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local DragonRig = require(ReplicatedStorage.Shared.DragonRig)
+
 local DragonCostume = {}
 
 local COSTUME_NAME = "DragonCostume"
@@ -20,8 +22,6 @@ local COSTUME_NAME = "DragonCostume"
 -- enlarged to hatchling size; growth scales the whole character on top.
 local MESH_SCALE = 3
 local MESH_YAW = 0 -- the import already faces -Z, Roblox's forward
-local MOUTH_BONE = "Bone_039" -- last bone of the head chain, at the snout
-local MOUTH_EMISSION = Enum.NormalId.Top -- a bone's Y axis runs along the bone, out of the snout
 
 local WING_COLOR = Color3.fromRGB(140, 30, 30)
 local HORN_COLOR = Color3.fromRGB(230, 200, 140)
@@ -214,12 +214,23 @@ local function dressMesh(character: Model, template: Model, root: BasePart, huma
 		hide(descendant, costume)
 	end)
 
-	local bone = mesh:FindFirstChild(MOUTH_BONE, true)
-	if bone and bone:IsA("Attachment") then
-		addFire(bone, MOUTH_EMISSION)
-		setMouth(character, bone)
+	-- The mouth is a child bone hung off the head bone, so it follows the
+	-- head when animated, offset down to the jaw and facing the mesh's forward.
+	local headBone = mesh:FindFirstChild(DragonRig.MouthBone, true)
+	if headBone and headBone:IsA("Bone") then
+		local unit = mesh.Size.Y / DragonRig.ModelHeight
+		local worldPosition = headBone.WorldCFrame.Position
+			+ mesh.CFrame:VectorToWorldSpace(DragonRig.MouthOffset * unit)
+		local mouth = Instance.new("Bone")
+		mouth.Name = "Mouth"
+		mouth.CFrame = headBone.WorldCFrame:ToObjectSpace(CFrame.new(worldPosition) * mesh.CFrame.Rotation)
+		mouth.Parent = headBone
+		addFire(mouth, Enum.NormalId.Front)
+		setMouth(character, mouth)
 	else
-		warn(`[DragonCostume] Mouth bone {MOUTH_BONE} not found on the dragon mesh; fire has nowhere to come from`)
+		warn(
+			`[DragonCostume] Head bone {DragonRig.MouthBone} not found on the dragon mesh; fire has nowhere to come from`
+		)
 	end
 	return true
 end
