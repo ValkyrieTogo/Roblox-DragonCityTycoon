@@ -307,7 +307,6 @@ function Builder.Build(): Folder
 
 	-- Clear any terrain in the island's volume so the build is deterministic.
 	Terrain.Clear(Vector3.new(0, FLOOR_TOP - 40, -totalLength / 2), Vector3.new(width + 120, 260, totalLength + 120))
-	Terrain.EnableDecoration()
 
 	type Lane = { Index: number, Zone: Config.Zone, StartZ: number, EndZ: number }
 	local lanes: { Lane } = {}

@@ -3,6 +3,8 @@
 -- smooth, naturally shaded ground with real materials (grass blades, glowing
 -- cracked lava, rock, glacier ice), which parts cannot match. Voxels are 4
 -- studs, so shapes are sized and placed on that grid where it matters.
+-- Grass blades (Terrain.Decoration) can only be enabled by hand in Studio:
+-- select Terrain in the Explorer and tick Decoration. Scripts may not set it.
 
 local Workspace = game:GetService("Workspace")
 
@@ -40,10 +42,6 @@ function Terrain.Boulder(center: Vector3, size: number, material: Enum.Material,
 		local offset = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.4, 0.5), rng:NextNumber(-1, 1)) * size * 0.3
 		terrain:FillBall(center + offset, size * rng:NextNumber(0.25, 0.4), material)
 	end
-end
-
-function Terrain.EnableDecoration()
-	terrain.Decoration = true
 end
 
 return Terrain
