@@ -598,48 +598,11 @@ end
 -- or an arrival pad named `arrival`.
 local function magicCircle(parent: Instance, position: Vector3, radius: number, color: Color3, label: string): Part
 	local model = Parts.model(parent, "MagicCircle")
-	local outer = Parts.disc(
-		model,
-		"Outer",
-		radius + 1.2,
-		0.25,
-		position + Vector3.new(0, 0.12, 0),
-		DARK_STONE,
-		Enum.Material.Slate
-	)
-	Parts.noCollide(outer)
-	local glow = Parts.disc(model, "Glow", radius, 0.3, position + Vector3.new(0, 0.2, 0), color, Enum.Material.Neon)
-	glow.Transparency = 0.35
-	Parts.noCollide(glow)
-	local inner = Parts.disc(
-		model,
-		"Inner",
-		radius * 0.55,
-		0.32,
-		position + Vector3.new(0, 0.2, 0),
-		DARK_STONE,
-		Enum.Material.Slate
-	)
-	Parts.noCollide(inner)
-	local core =
-		Parts.disc(model, "Core", radius * 0.3, 0.34, position + Vector3.new(0, 0.2, 0), color, Enum.Material.Neon)
-	Parts.noCollide(core)
-	for i = 1, 6 do
-		local a = i / 6 * math.pi * 2
-		local rune = Parts.block(
-			model,
-			"Rune",
-			Vector3.new(0.8, 0.36, 1.6),
-			CFrame.new(position + Vector3.new(math.cos(a) * radius * 0.78, 0.2, math.sin(a) * radius * 0.78))
-				* CFrame.Angles(0, -a, 0),
-			color,
-			Enum.Material.Neon
-		)
-		Parts.noCollide(rune)
-	end
-	Parts.light(glow, color, radius * 3, 1.5)
+	local glow = Parts.button(model, "Glow", position, radius, color)
 	Parts.motes(glow, 12, color, 0.5)
-	Parts.sign(glow, label, 6, 240, color)
+	if label ~= "" then
+		Parts.sign(glow, label, 6, 240, color)
+	end
 	return glow
 end
 

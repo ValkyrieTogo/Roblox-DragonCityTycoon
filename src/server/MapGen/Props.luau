@@ -965,46 +965,11 @@ function Props.trainingDummy(
 	-- Standing on it is what starts training. Its light joins the blaze.
 	local padCenter = (base * CFrame.new(0, 0, -PAD_DISTANCE)).Position
 	local pad = Parts.model(model, "TrainingPad")
-	local outer = Parts.disc(
-		pad,
-		"Outer",
-		PAD_RADIUS + 1.2,
-		0.25,
-		padCenter + Vector3.new(0, 0.12, 0),
-		DARK_STONE,
-		Enum.Material.Slate
-	)
-	Parts.noCollide(outer)
-	local glow = Parts.disc(pad, "Pad", PAD_RADIUS, 0.3, padCenter + Vector3.new(0, 0.2, 0), LAVA, Enum.Material.Neon)
-	glow.Transparency = 0.45
-	Parts.noCollide(glow)
-	local inner = Parts.disc(
-		pad,
-		"Inner",
-		PAD_RADIUS * 0.55,
-		0.32,
-		padCenter + Vector3.new(0, 0.2, 0),
-		DARK_STONE,
-		Enum.Material.Slate
-	)
-	Parts.noCollide(inner)
-	for i = 1, 8 do
-		local a = i / 8 * math.pi * 2
-		local rune = Parts.block(
-			pad,
-			"Rune",
-			Vector3.new(0.7, 0.36, 1.4),
-			CFrame.new(padCenter + Vector3.new(math.cos(a) * PAD_RADIUS * 0.78, 0.2, math.sin(a) * PAD_RADIUS * 0.78))
-				* CFrame.Angles(0, -a, 0),
-			LAVA_LIGHT,
-			Enum.Material.Neon
-		)
-		Parts.noCollide(rune)
-	end
-	local padBlaze = Parts.block(pad, "Blaze", Vector3.new(1, 1, 1), CFrame.new(padCenter + Vector3.new(0, 1, 0)), LAVA)
+	local glow = Parts.button(pad, "Pad", padCenter, PAD_RADIUS, LAVA)
+	local padBlaze = Parts.block(pad, "Blaze", Vector3.new(1, 1, 1), CFrame.new(padCenter + Vector3.new(0, 2, 0)), LAVA)
 	Parts.invisible(padBlaze)
 	Parts.light(padBlaze, LAVA_LIGHT, PAD_RADIUS * 3, 2).Enabled = false
-	Parts.sign(glow, "Stand here to train", 4, 220, LAVA_LIGHT)
+	Parts.sign(glow, "TRAIN", 4, 160, LAVA_LIGHT)
 
 	model.PrimaryPart = body
 	if scale and scale ~= 1 then

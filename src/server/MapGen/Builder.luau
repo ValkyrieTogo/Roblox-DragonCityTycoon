@@ -281,15 +281,10 @@ local function buildReturnPortal(map: Folder)
 	local model = Parts.model(map, "ReturnPortal")
 	local position = Vector3.new(0, FLOOR_TOP, -16)
 	local color = Color3.fromRGB(150, 70, 220)
-	local outer = Parts.disc(model, "Outer", 9, 0.25, position + Vector3.new(0, 0.12, 0), POST, Enum.Material.Slate)
-	Parts.noCollide(outer)
-	local glow = Parts.disc(model, "Glow", 8, 0.3, position + Vector3.new(0, 0.2, 0), color, Enum.Material.Neon)
-	glow.Transparency = 0.35
-	Parts.noCollide(glow)
+	local glow = Parts.button(model, "Glow", position, 8, color)
 	glow.CanTouch = true
 	glow:SetAttribute("Destination", "TownGate")
 	CollectionService:AddTag(glow, "Portal")
-	Parts.light(glow, color, 24, 1.5)
 	Parts.motes(glow, 12, color, 0.5)
 	Parts.sign(glow, "Back to Town", 6, 220, color)
 	for _, x in { -11, 11 } do

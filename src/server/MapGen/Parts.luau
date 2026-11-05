@@ -186,6 +186,37 @@ function Parts.moteField(
 	return field
 end
 
+-- A raised, glowing floor button like the pads in other games: a dark base,
+-- a bright rim, an opaque neon face and a darker emblem in the middle. The
+-- face is returned, named `name`, with its top about a stud above `center`.
+function Parts.button(parent: Instance, name: string, center: Vector3, radius: number, color: Color3): Part
+	local rim = color:Lerp(Color3.new(1, 1, 1), 0.55)
+	local base = Parts.disc(
+		parent,
+		"ButtonBase",
+		radius + 1.4,
+		0.5,
+		center + Vector3.new(0, 0.25, 0),
+		Color3.fromRGB(50, 48, 52),
+		Enum.Material.Slate
+	)
+	base.TopSurface = Enum.SurfaceType.Smooth
+	Parts.disc(parent, "ButtonRim", radius + 0.6, 0.7, center + Vector3.new(0, 0.35, 0), rim, Enum.Material.Neon)
+	local face = Parts.disc(parent, name, radius, 0.9, center + Vector3.new(0, 0.45, 0), color, Enum.Material.Neon)
+	local emblem = Parts.disc(
+		parent,
+		"ButtonEmblem",
+		radius * 0.45,
+		1,
+		center + Vector3.new(0, 0.5, 0),
+		color:Lerp(Color3.new(0, 0, 0), 0.45),
+		Enum.Material.SmoothPlastic
+	)
+	Parts.noCollide(emblem)
+	Parts.light(face, color, radius * 3, 1.5)
+	return face
+end
+
 function Parts.model(parent: Instance, name: string): Model
 	local model = Instance.new("Model")
 	model.Name = name
