@@ -19,10 +19,10 @@ local COSTUME_NAME = "DragonCostume"
 -- Wing pose, in radians. The rest pose has the wings spread and raised;
 -- these tuck them down along the flanks. The sweep is applied first, so the
 -- wing goes back along the body, then the fold drops what still sticks out.
-local WING_SWEEP = 1.05 -- shoulder back along the body
-local WING_FOLD = 1.2 -- shoulder down
+local WING_SWEEP = 0.8 -- shoulder back along the body
+local WING_FOLD = 1.0 -- shoulder down
 local WING_FOLD_WALK = 0.1 -- extra when walking
-local WING_ELBOW_FOLD = 0.5 -- forearm down further, hugging the flank
+local WING_ELBOW_FOLD = 0.35 -- forearm down further, hugging the flank
 local WING_ELBOW_SWEEP = 0.35 -- forearm back along the body
 local WING_TIP = 0.25 -- outer segments curled down
 
