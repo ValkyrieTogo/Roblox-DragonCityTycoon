@@ -40,7 +40,7 @@ Config.CameraMaxZoom = 80
 -- Zones, in order along the map. Each zone is a training ground: clicks made
 -- inside it are worth Multiplier times more, but only once the player has
 -- RequiredFire, which is also what melts the ice wall at its entrance.
--- Length is the placeholder floor length in studs, used only by DevMap.
+-- Length is the floor length in studs, used by the code-built map.
 export type Zone = {
 	Name: string,
 	Multiplier: number,
@@ -50,21 +50,25 @@ export type Zone = {
 }
 
 Config.Zones = {
-	{ Name = "Hatchery", Multiplier = 1, RequiredFire = 0, Length = 150, Color = Color3.fromRGB(96, 160, 72) },
-	{ Name = "Campfire", Multiplier = 2, RequiredFire = 50, Length = 180, Color = Color3.fromRGB(130, 92, 60) },
-	{ Name = "Lava Pit", Multiplier = 5, RequiredFire = 500, Length = 200, Color = Color3.fromRGB(70, 50, 48) },
-	{ Name = "Volcano", Multiplier = 20, RequiredFire = 5000, Length = 250, Color = Color3.fromRGB(45, 35, 35) },
+	{ Name = "Hatchery", Multiplier = 1, RequiredFire = 0, Length = 340, Color = Color3.fromRGB(96, 160, 72) },
+	{ Name = "Campfire", Multiplier = 2, RequiredFire = 50, Length = 380, Color = Color3.fromRGB(125, 90, 58) },
+	{ Name = "Lava Pit", Multiplier = 5, RequiredFire = 500, Length = 440, Color = Color3.fromRGB(44, 38, 40) },
+	{ Name = "Volcano", Multiplier = 20, RequiredFire = 5000, Length = 520, Color = Color3.fromRGB(58, 48, 48) },
 	{
 		Name = "Dragon Throne",
 		Multiplier = 50,
 		RequiredFire = 50000,
-		Length = 180,
-		Color = Color3.fromRGB(190, 150, 60),
+		Length = 380,
+		Color = Color3.fromRGB(205, 165, 75),
 	},
 } :: { Zone }
 
-Config.ZoneWidth = 120
-Config.IceWallHeight = 28
+Config.ZoneWidth = 220
+Config.IceWallHeight = 30
+-- Seed for the code-built map so it is the same every server.
+Config.MapSeed = 7
+-- Hide the template Baseplate so the island appears to float.
+Config.HideBaseplate = true
 
 -- Wins. Touching the win pad at the end of the last zone, with enough Fire for
 -- that zone, awards a Win, resets Fire and upgrades, and respawns the player.

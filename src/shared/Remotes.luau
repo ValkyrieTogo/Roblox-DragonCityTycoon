@@ -11,13 +11,14 @@ local Remotes = {}
 
 local function getFolder(): Folder
 	if RunService:IsServer() then
-		local folder = ReplicatedStorage:FindFirstChild(FOLDER_NAME)
-		if not folder then
-			folder = Instance.new("Folder")
-			folder.Name = FOLDER_NAME
-			folder.Parent = ReplicatedStorage
+		local existing = ReplicatedStorage:FindFirstChild(FOLDER_NAME)
+		if existing then
+			return existing :: Folder
 		end
-		return folder :: Folder
+		local folder = Instance.new("Folder")
+		folder.Name = FOLDER_NAME
+		folder.Parent = ReplicatedStorage
+		return folder
 	end
 	return ReplicatedStorage:WaitForChild(FOLDER_NAME) :: Folder
 end
@@ -25,13 +26,14 @@ end
 local function getEvent(name: string): RemoteEvent
 	local folder = getFolder()
 	if RunService:IsServer() then
-		local event = folder:FindFirstChild(name)
-		if not event then
-			event = Instance.new("RemoteEvent")
-			event.Name = name
-			event.Parent = folder
+		local existing = folder:FindFirstChild(name)
+		if existing then
+			return existing :: RemoteEvent
 		end
-		return event :: RemoteEvent
+		local event = Instance.new("RemoteEvent")
+		event.Name = name
+		event.Parent = folder
+		return event
 	end
 	return folder:WaitForChild(name) :: RemoteEvent
 end

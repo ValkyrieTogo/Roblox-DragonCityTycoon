@@ -101,9 +101,6 @@ function DragonCostume.Dress(character: Model)
 		warn(`[DragonCostume] {character.Name} is missing a Head or Torso`)
 		return
 	end
-	if not lowerTorso or not lowerTorso:IsA("BasePart") then
-		lowerTorso = upperTorso
-	end
 
 	local costume = Instance.new("Model")
 	costume.Name = COSTUME_NAME
@@ -116,10 +113,11 @@ function DragonCostume.Dress(character: Model)
 	attach(wingRight, upperTorso, CFrame.new(1.6, 0.5, 0.9) * CFrame.Angles(0, math.rad(35), math.rad(-25)), costume)
 
 	-- Tail trails behind and down from the lower back.
+	local tailBase: BasePart = if lowerTorso and lowerTorso:IsA("BasePart") then lowerTorso else upperTorso
 	local tail = makePart("Tail", Vector3.new(0.5, 0.45, 2.6), TAIL_COLOR)
-	attach(tail, lowerTorso, CFrame.new(0, -0.2, 1.6) * CFrame.Angles(math.rad(-20), 0, 0), costume)
+	attach(tail, tailBase, CFrame.new(0, -0.2, 1.6) * CFrame.Angles(math.rad(-20), 0, 0), costume)
 	local tailTip = makePart("TailTip", Vector3.new(0.7, 0.2, 0.9), WING_COLOR)
-	attach(tailTip, lowerTorso, CFrame.new(0, 0.4, 3.1) * CFrame.Angles(math.rad(-20), 0, 0), costume)
+	attach(tailTip, tailBase, CFrame.new(0, 0.4, 3.1) * CFrame.Angles(math.rad(-20), 0, 0), costume)
 
 	-- Horns tilt outward from the top of the head.
 	local hornSize = Vector3.new(0.25, 0.8, 0.25)

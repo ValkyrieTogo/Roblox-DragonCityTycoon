@@ -66,7 +66,7 @@ but the server grants a zone's multiplier from its own Fire check.
 - **Map**: build a folder named `Map` in Workspace. Tag zone floors
   `ZoneFloor` with attribute `ZoneIndex`, tag walls `IceWall` with `ZoneIndex`
   and `RequiredFire` (optionally a BillboardGui `Sign` with TextLabel
-  `Label`), tag the end pad `WinPad`, add a SpawnLocation. `DevMap` is then
+  `Label`), tag the end pad `WinPad`, add a SpawnLocation. The code-built map in `src/server/MapGen` is then
   skipped.
 - **Dragon**: `DragonCostume` welds placeholder wings, tail and horns to the
   avatar and adds `Head.Mouth` with a `Flame` emitter and `Glow` light.

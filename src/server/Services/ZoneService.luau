@@ -17,13 +17,13 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local DevMap = require(script.Parent.Parent.DevMap)
+local MapBuilder = require(script.Parent.Parent.MapGen.Builder)
 local StatService = require(script.Parent.StatService)
 
 local ZoneService = {}
 
 local SCAN_INTERVAL = 0.2 -- seconds between position checks
-local HEIGHT_ALLOWANCE = 60 -- how far above a floor a player still counts as in the zone
+local HEIGHT_ALLOWANCE = 160 -- how far above a floor a player still counts as in the zone (volcano top)
 
 type ZoneBox = { Index: number, Min: Vector3, Max: Vector3 }
 
@@ -34,8 +34,8 @@ local function ensureMap()
 	if existing then
 		return
 	end
-	warn("[ZoneService] No Map folder in Workspace, using the code-built placeholder")
-	DevMap.Build()
+	print("[ZoneService] No Map folder in Workspace, building the code-generated map")
+	MapBuilder.Build()
 end
 
 local function collectZones()
