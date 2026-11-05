@@ -18,8 +18,10 @@ local ORDER = {
 	"DataService",
 	"ZoneService",
 	"ClickService",
+	"TrainingService",
 	"GrowthService",
 	"WinService",
+	"NpcService",
 }
 
 local function report(name: string, phase: string, err: unknown)

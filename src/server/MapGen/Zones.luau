@@ -60,32 +60,96 @@ local function along(r: Region, fraction: number): number
 	return r.StartZ - r.Length * fraction
 end
 
--- Random ground point off the centre path, away from the edges and ends.
+-- Ground rectangles ({minX, maxX, minZ, maxZ}) that random scatter must avoid,
+-- such as the training yard. Reset for every zone.
+local reserved: { { number } } = {}
+
+local function reserve(x1: number, x2: number, z1: number, z2: number)
+	table.insert(reserved, { math.min(x1, x2), math.max(x1, x2), math.min(z1, z2), math.max(z1, z2) })
+end
+
+local function isReserved(x: number, z: number): boolean
+	for _, rect in reserved do
+		if x >= rect[1] and x <= rect[2] and z >= rect[3] and z <= rect[4] then
+			return true
+		end
+	end
+	return false
+end
+
+-- Random ground point off the centre path, away from the edges, ends and
+-- reserved areas.
 local function scatterPoint(r: Region, keepClear: number?): Vector3
 	local half = r.Width / 2 - EDGE_MARGIN
 	local clear = keepClear or PATH_HALF
-	local x = 0
-	repeat
+	local x, z = 0, 0
+	for _ = 1, 40 do
 		x = r.Rng:NextNumber(-half, half)
-	until math.abs(x) > clear
-	local z = r.Rng:NextNumber(r.EndZ + END_MARGIN, r.StartZ - END_MARGIN)
+		z = r.Rng:NextNumber(r.EndZ + END_MARGIN, r.StartZ - END_MARGIN)
+		if math.abs(x) > clear and not isReserved(x, z) then
+			break
+		end
+	end
 	return ground(r, x, z)
 end
 
 -- Random ground point near one of the long edges.
 local function edgePoint(r: Region): Vector3
-	local side = if r.Rng:NextNumber() < 0.5 then -1 else 1
-	local x = side * (r.Width / 2 - r.Rng:NextNumber(EDGE_MARGIN, EDGE_MARGIN + 22))
-	local z = r.Rng:NextNumber(r.EndZ + END_MARGIN, r.StartZ - END_MARGIN)
+	local x, z = 0, 0
+	for _ = 1, 40 do
+		local side = if r.Rng:NextNumber() < 0.5 then -1 else 1
+		x = side * (r.Width / 2 - r.Rng:NextNumber(EDGE_MARGIN, EDGE_MARGIN + 22))
+		z = r.Rng:NextNumber(r.EndZ + END_MARGIN, r.StartZ - END_MARGIN)
+		if not isReserved(x, z) then
+			break
+		end
+	end
 	return ground(r, x, z)
+end
+
+-- A row of training dummies beside the path, torches at both ends, a sign on
+-- the path side and the zone's trainer at the head of the row.
+local function trainingYard(r: Region, side: number, fraction: number, count: number)
+	local f = r.Parent
+	local x = side * (PATH_HALF + 18)
+	local spacing = 11
+	local headZ = along(r, fraction)
+	local tailZ = headZ - (count - 1) * spacing
+	local tier = if r.Index <= 2 then 1 elseif r.Index <= 4 then 2 else 3
+
+	for i = 0, count - 1 do
+		local z = headZ - i * spacing
+		Props.trainingDummy(f, ground(r, x, z), ground(r, 0, z), tier, r.Rng)
+	end
+	Props.torch(f, ground(r, x + side * 7, headZ + 9), 7)
+	Props.torch(f, ground(r, x + side * 7, tailZ - 9), 7)
+
+	local post = Parts.block(
+		f,
+		"YardSign",
+		Vector3.new(0.8, 6, 0.8),
+		CFrame.new(ground(r, side * (PATH_HALF + 5), headZ + 10) + Vector3.new(0, 3, 0)),
+		Color3.fromRGB(66, 44, 28),
+		Enum.Material.Wood
+	)
+	Parts.sign(post, "Training Yard\nStand by a dummy to breathe on it", 5, 240)
+
+	Props.npcSpawn(f, ground(r, x + side * 9, headZ + 15), ground(r, x, headZ - spacing), "Trainer", r.Index)
+	reserve(side * (PATH_HALF + 2), x + side * 20, headZ + 24, tailZ - 16)
 end
 
 local decorators: { [string]: (Region) -> () } = {}
 
--- Hatchery: a grassy village of huts, stone eggs, trees and a welcome fire.
+-- Hatchery: a grassy village of huts, stone eggs, trees, a welcome fire, the
+-- first training yard and a few hatchlings wandering about.
 decorators["Hatchery"] = function(r)
 	local f = r.Parent
+	trainingYard(r, -1, 0.3, 4)
 	Props.campfire(f, ground(r, 24, along(r, 0.14)), 3, r.Rng)
+	for seat = 1, #Config.Villagers do
+		local p = scatterPoint(r, PATH_HALF + 6)
+		Props.npcSpawn(f, p, ground(r, 0, p.Z), "Villager", r.Index, seat)
+	end
 
 	local huts = {
 		{ -64, 0.16 },
@@ -121,6 +185,7 @@ end
 decorators["Campfire"] = function(r)
 	local f = r.Parent
 	local cz = r.CenterZ
+	trainingYard(r, 1, 0.12, 4)
 	Props.campfire(f, ground(r, 0, cz), 6, r.Rng)
 
 	local stones = 16
@@ -159,6 +224,7 @@ end
 decorators["Lava Pit"] = function(r)
 	local f = r.Parent
 	local half = r.Width / 2
+	trainingYard(r, -1, 0.42, 4)
 
 	for _, pool in { { -62, 0.2, 14 }, { 66, 0.42, 12 }, { -72, 0.72, 18 }, { 58, 0.88, 10 } } do
 		Props.lavaPool(f, ground(r, pool[1], along(r, pool[2])), pool[3])
@@ -200,6 +266,7 @@ end
 -- Volcano: a smoking mountain beside the path, guarded by stone dragons.
 decorators["Volcano"] = function(r)
 	local f = r.Parent
+	trainingYard(r, -1, 0.3, 4)
 	Props.volcano(f, ground(r, 64, along(r, 0.55)), 48, 66, r.Rng)
 	Props.volcano(f, ground(r, -78, along(r, 0.22)), 26, 34, r.Rng)
 
@@ -245,6 +312,7 @@ end
 decorators["Dragon Throne"] = function(r)
 	local f = r.Parent
 	local half = r.Width / 2
+	trainingYard(r, 1, 0.3, 3)
 	local daisZ = r.EndZ + 58
 	local daisHeight = 6
 	local daisTop = r.Top + daisHeight
@@ -303,6 +371,7 @@ decorators["Dragon Throne"] = function(r)
 end
 
 function Zones.Decorate(region: Region)
+	reserved = {}
 	local decorate = decorators[region.Zone.Name]
 	if decorate then
 		decorate(region)

@@ -68,6 +68,14 @@ but the server grants a zone's multiplier from its own Fire check.
   and `RequiredFire` (optionally a BillboardGui `Sign` with TextLabel
   `Label`), tag the end pad `WinPad`, add a SpawnLocation. The code-built map in `src/server/MapGen` is then
   skipped.
+- **Training dummies**: tag any Model or BasePart `TrainingDummy`. A player
+  within `Config.TrainingRadius` of it auto-breathes. Optionally give it a
+  descendant named `Blaze` holding a `Fire` and `PointLight`; the server
+  enables them while someone trains there.
+- **NPCs**: tag an invisible part `NpcSpawn` facing where the dragon should
+  look, with attributes `Role` (`Trainer` or `Villager`), `ZoneIndex` and
+  `Seat` (which villager). `NpcService` builds and animates the dragon there;
+  lines and names come from `Config.Trainers` and `Config.Villagers`.
 - **Dragon**: `DragonCostume` welds placeholder wings, tail and horns to the
   avatar and adds `Head.Mouth` with a `Flame` emitter and `Glow` light.
   Replace the parts with meshes or accessories; the effects only need the

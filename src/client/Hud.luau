@@ -119,7 +119,8 @@ function Hud.Init()
 		local perClick = numberAttribute("FirePerClick", Config.BaseFirePerClick)
 		local zoneMultiplier = numberAttribute("ZoneMultiplier", 1)
 		local winMultiplier = numberAttribute("WinMultiplier", 1)
-		perClickLabel.Text = `+{Format.Short(math.floor(perClick * zoneMultiplier * winMultiplier))} per click`
+		local clickValue = math.floor(perClick * zoneMultiplier * winMultiplier)
+		perClickLabel.Text = `+{Format.Short(clickValue)} per click`
 
 		local zoneName = localPlayer:GetAttribute("ZoneName")
 		if typeof(zoneName) == "string" and zoneName ~= "" then
@@ -127,12 +128,21 @@ function Hud.Init()
 		else
 			zoneLabel.Text = ""
 		end
+
+		if localPlayer:GetAttribute("Training") == true then
+			local perSecond = clickValue * Config.TrainingClicksPerTick / Config.TrainingTick
+			hint.Text = `Training!  +{Format.Short(perSecond)} Fire per second`
+			hint.TextColor3 = Color3.fromRGB(255, 170, 40)
+		else
+			hint.Text = "Click or tap anywhere to breathe fire"
+			hint.TextColor3 = Color3.fromRGB(220, 220, 220)
+		end
 	end
 
 	updateFire(0)
 	updateWins(0)
 	updateClickInfo()
-	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName", "WinMultiplier" } do
+	for _, name in { "FirePerClick", "ZoneMultiplier", "ZoneName", "WinMultiplier", "Training" } do
 		localPlayer:GetAttributeChangedSignal(name):Connect(updateClickInfo)
 	end
 	watchStat("Fire", updateFire)

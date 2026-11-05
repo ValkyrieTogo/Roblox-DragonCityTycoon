@@ -140,4 +140,72 @@ function Config.UpgradeAttribute(id: string): string
 	return `Upgrade_{id}`
 end
 
+-- Training. Standing within TrainingRadius studs of a training dummy breathes
+-- fire on it automatically: every TrainingTick seconds the player gains
+-- TrainingClicksPerTick clicks' worth of Fire at their current click value.
+-- Idle income, slower than clicking by hand, so clicking still matters.
+Config.TrainingRadius = 16
+Config.TrainingTick = 0.5
+Config.TrainingClicksPerTick = 1
+
+-- NPC dragons. A trainer stands at every training yard and hatchlings wander
+-- the Hatchery. Each cycles through its lines; walking up and pressing the
+-- prompt skips to the next one.
+Config.NpcTurnRadius = 24
+Config.NpcWalkSpeed = 8
+Config.NpcLineSeconds = 7
+Config.NpcBreathSeconds = 4
+
+export type NpcSpeech = { Name: string, Lines: { string } }
+
+Config.Trainers = {
+	["Hatchery"] = {
+		Name = "Ember",
+		Lines = {
+			"Welcome, hatchling! Click to breathe fire.",
+			"Stand by my logs and you breathe on your own.",
+			"Training is slow but it never sleeps.",
+			"Spend Fire on Dragon Breath. Every click counts.",
+		},
+	},
+	["Campfire"] = {
+		Name = "Ash",
+		Lines = {
+			"Everything you breathe here is worth double.",
+			"Rest by the fire. Or better, train by it.",
+			"The ice ahead melts at 500 Fire.",
+		},
+	},
+	["Lava Pit"] = {
+		Name = "Cinder",
+		Lines = {
+			"Mind the rivers. Lava is not for swimming.",
+			"Five times the Fire for every breath here.",
+			"My totems have taken worse than you.",
+		},
+	},
+	["Volcano"] = {
+		Name = "Magma",
+		Lines = {
+			"Twenty times! Feel the mountain in your chest.",
+			"The throne needs 50K Fire. Keep breathing.",
+			"Bigger dragons breathe bigger. Grow.",
+		},
+	},
+	["Dragon Throne"] = {
+		Name = "Aurum",
+		Lines = {
+			"Fifty times the Fire. You have earned it.",
+			"Touch the pad with enough Fire to claim a Win.",
+			"Every Win makes all your Fire burn hotter.",
+		},
+	},
+} :: { [string]: NpcSpeech }
+
+Config.Villagers = {
+	{ Name = "Pip", Lines = { "I hatched yesterday!", "Can you breathe fire yet?", "Ember says click a lot." } },
+	{ Name = "Sprout", Lines = { "I like the eggs. They are warm.", "Someday I will see the volcano." } },
+	{ Name = "Nibble", Lines = { "The ice wall is cold. Melt it!", "Race you to the campfire!" } },
+} :: { NpcSpeech }
+
 return Config

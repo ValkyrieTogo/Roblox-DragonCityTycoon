@@ -808,4 +808,171 @@ function Props.winPad(parent: Instance, position: Vector3, radius: number)
 	return pad
 end
 
+-- Training and NPCs --------------------------------------------------------
+
+local SCORCH = Color3.fromRGB(28, 24, 22)
+local BASALT = Color3.fromRGB(48, 44, 48)
+
+-- A target players breathe fire on. Tier 1 is a straw-wrapped log on a
+-- stump, tier 2 a carved basalt totem with a glowing dragon face, tier 3 the
+-- same totem gilded. Tagged TrainingDummy; the server lights its Blaze while
+-- someone trains on it.
+function Props.trainingDummy(parent: Instance, position: Vector3, faceToward: Vector3, tier: number, rng: Random): Model
+	local model = Parts.model(parent, "TrainingDummy")
+	local yaw = yawToward(position, faceToward)
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	local height = 7
+
+	Parts.disc(
+		model,
+		"Mat",
+		4.5,
+		0.4,
+		position + Vector3.new(0, 0.2, 0),
+		if tier == 1 then vary(STONE, rng, 0.1) else DARK_STONE,
+		if tier == 1 then Enum.Material.Cobblestone else Enum.Material.Slate
+	)
+
+	local body: BasePart
+	local faceZ: number
+	if tier == 1 then
+		Parts.cylinder(
+			model,
+			"Stump",
+			2.3,
+			1.4,
+			base * CFrame.new(0, 0.7, 0),
+			vary(DARK_WOOD, rng, 0.1),
+			Enum.Material.Wood
+		)
+		body = Parts.cylinder(
+			model,
+			"Log",
+			1.25,
+			height,
+			base * CFrame.new(0, height / 2 + 1, 0) * CFrame.Angles(rng:NextNumber(-0.04, 0.04), 0, 0),
+			vary(WOOD, rng, 0.12),
+			Enum.Material.Wood
+		)
+		-- Straw bundle tied around the middle: the part that burns.
+		Parts.egg(
+			model,
+			"Straw",
+			Vector3.new(3.6, 3, 3.6),
+			base * CFrame.new(0, height * 0.55 + 1, 0) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0),
+			vary(STRAW, rng, 0.1),
+			Enum.Material.Fabric
+		)
+		for _, y in { height * 0.4 + 1, height * 0.7 + 1 } do
+			Parts.cylinder(model, "Rope", 1.9, 0.35, base * CFrame.new(0, y, 0), DARK_WOOD, Enum.Material.Fabric)
+		end
+		-- Charred top where past breaths landed.
+		Parts.cylinder(model, "Char", 1.3, 1.2, base * CFrame.new(0, height + 0.6, 0), SCORCH, Enum.Material.Slate)
+		faceZ = -1.85
+	else
+		local color = if tier >= 3 then GOLD else BASALT
+		local material = if tier >= 3 then Enum.Material.Metal else Enum.Material.Basalt
+		Parts.block(
+			model,
+			"Plinth",
+			Vector3.new(4.4, 1.6, 4.4),
+			base * CFrame.new(0, 0.8, 0),
+			DARK_STONE,
+			Enum.Material.Slate
+		)
+		body = Parts.block(
+			model,
+			"Totem",
+			Vector3.new(2.8, height, 2.8),
+			base * CFrame.new(0, height / 2 + 1.6, 0),
+			vary(color, rng, 0.08),
+			material
+		)
+		for _, y in { 0.3, 0.6, 0.85 } do
+			Parts.block(
+				model,
+				"Band",
+				Vector3.new(3.1, 0.5, 3.1),
+				base * CFrame.new(0, 1.6 + height * y, 0),
+				if tier >= 3 then GOLD_DARK else DARK_STONE,
+				material
+			)
+		end
+		-- A carved dragon face toward the path: glowing eyes, a seam, a snout.
+		for _, x in { -0.7, 0.7 } do
+			local eye = Parts.block(
+				model,
+				"Eye",
+				Vector3.new(0.5, 0.25, 0.3),
+				base * CFrame.new(x, 1.6 + height * 0.78, -1.5),
+				LAVA,
+				Enum.Material.Neon
+			)
+			Parts.noCollide(eye)
+		end
+		local seam = Parts.block(
+			model,
+			"Seam",
+			Vector3.new(0.4, height * 0.45, 0.3),
+			base * CFrame.new(0, 1.6 + height * 0.3, -1.5),
+			LAVA,
+			Enum.Material.Neon
+		)
+		Parts.noCollide(seam)
+		Parts.block(
+			model,
+			"Snout",
+			Vector3.new(1.4, 0.9, 1),
+			base * CFrame.new(0, 1.6 + height * 0.66, -1.8),
+			vary(color, rng, 0.08),
+			material
+		)
+		faceZ = -2.3
+	end
+
+	-- Scorch mark on the side players stand at.
+	local scorch = Parts.block(
+		model,
+		"Scorch",
+		Vector3.new(2, 2.4, 0.1),
+		base * CFrame.new(0, height * 0.5 + 1, faceZ),
+		SCORCH,
+		Enum.Material.Slate
+	)
+	Parts.noCollide(scorch)
+
+	-- The blaze lit while training, off until then.
+	local core =
+		Parts.block(model, "Blaze", Vector3.new(2.5, 2.5, 2.5), base * CFrame.new(0, height * 0.6 + 1, 0), LAVA)
+	Parts.invisible(core)
+	Parts.fire(core, 5, 12).Enabled = false
+	Parts.light(core, LAVA_LIGHT, 20, 2).Enabled = false
+
+	model.PrimaryPart = body
+	CollectionService:AddTag(model, "TrainingDummy")
+	return model
+end
+
+-- Where an NPC appears, facing `faceToward`. Invisible, tagged NpcSpawn with
+-- attributes Role ("Trainer" or "Villager"), ZoneIndex and Seat (which
+-- villager). NpcService builds the dragon there.
+function Props.npcSpawn(
+	parent: Instance,
+	position: Vector3,
+	faceToward: Vector3,
+	role: string,
+	zoneIndex: number,
+	seat: number?
+): Part
+	local eye = position + Vector3.new(0, 1, 0)
+	local look = Vector3.new(faceToward.X, eye.Y, faceToward.Z)
+	local spawn = Parts.block(parent, "NpcSpawn", Vector3.new(2, 2, 2), CFrame.lookAt(eye, look), CRIMSON)
+	Parts.invisible(spawn)
+	spawn:SetAttribute("Role", role)
+	spawn:SetAttribute("ZoneIndex", zoneIndex)
+	spawn:SetAttribute("Seat", seat or 1)
+	CollectionService:AddTag(spawn, "NpcSpawn")
+	return spawn
+end
+
 return Props
