@@ -16,6 +16,13 @@ local DragonAnimator = {}
 
 local COSTUME_NAME = "DragonCostume"
 
+-- Wing pose, in radians. The rest pose has the wings spread; these fold them.
+local WING_FOLD = 0.85 -- shoulder down from the rest pose
+local WING_FOLD_WALK = 0.2 -- extra when walking
+local WING_SWEEP = 0.45 -- shoulder back along the body
+local WING_ELBOW = 0.55 -- second segment bent back up
+local WING_TIP = 0.25 -- outer segments curled
+
 -- A bone plus the mesh's axes expressed in the bone's own space, so a swing
 -- "about the body's sideways axis" is the same call for every bone.
 type Driven = {
@@ -39,6 +46,7 @@ type Rig = {
 	Hips: Driven?,
 	Phase: number, -- so dragons do not flap in unison
 	Stride: number, -- accumulated walk cycle, in cycles
+	Flap: number, -- accumulated wing cycle, in radians
 }
 
 local rigs: { [Model]: Rig } = {}
@@ -98,13 +106,26 @@ local function animate(rig: Rig, dt: number, now: number)
 	local stride = rig.Stride * math.pi * 2
 	local t = now + rig.Phase
 
-	-- Wings: slow lazy flap at rest, stronger with speed, each segment lagging.
-	local flap = 0.1 + 0.28 * walk
-	local flapRate = 2.4 + 1.6 * walk
+	-- Wings: held folded down and swept back along the body, lower still when
+	-- walking, with a soft breathing lift. The phase accumulates so a change
+	-- of speed never snaps the angle.
+	rig.Flap += dt * (1.6 + 1.2 * walk)
+	local breathe = math.sin(rig.Flap) * (0.05 + 0.04 * walk)
+	local fold = WING_FOLD + WING_FOLD_WALK * walk + breathe
+	local sweep = WING_SWEEP + 0.15 * walk
 	for _, wing in rig.Wings do
 		for i, segment in wing do
-			local angle = math.sin(t * flapRate - (i - 1) * 0.5) * flap * (if i == 1 then 1 else 0.55)
-			swing(segment, segment.AxisZ, angle * segment.Side)
+			local side = segment.Side
+			if i == 1 then
+				-- Shoulder: down about the body's forward axis, back about its up axis.
+				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, -fold * side)
+					* CFrame.fromAxisAngle(segment.AxisY, -sweep * side)
+			elseif i == 2 then
+				-- Elbow: bends back up so the wing folds like a Z instead of dragging.
+				swing(segment, segment.AxisZ, (WING_ELBOW - breathe * 0.5) * side)
+			else
+				swing(segment, segment.AxisZ, WING_TIP * side)
+			end
 		end
 	end
 
@@ -184,6 +205,7 @@ local function track(model: Model)
 			Hips = find(mesh, DragonRig.Hips),
 			Phase = rng:NextNumber(0, 10),
 			Stride = rng:NextNumber(0, 1),
+			Flap = rng:NextNumber(0, math.pi * 2),
 		}
 	end)
 end
