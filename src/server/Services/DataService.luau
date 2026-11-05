@@ -38,8 +38,36 @@ type Profile = {
 	Loaded: boolean, -- false means the load failed and this player must not be saved
 }
 
-local store = DataStoreService:GetDataStore(STORE_NAME)
 local profiles: { [Player]: Profile } = {}
+
+-- The DataStore handle is fetched lazily and under pcall: in Studio, on a
+-- place opened from a local file or without API access, this call throws,
+-- and it must never take the server down with it.
+local store: GlobalDataStore? = nil
+local storeWarned = false
+
+local function getStore(): GlobalDataStore?
+	if store then
+		return store
+	end
+	local ok, result = pcall(function()
+		return DataStoreService:GetDataStore(STORE_NAME)
+	end)
+	if ok then
+		store = result
+		return store
+	end
+	if not storeWarned then
+		storeWarned = true
+		warn(`[DataService] DataStores unavailable, progress will not be saved: {result}`)
+		if RunService:IsStudio() then
+			warn(
+				"[DataService] In Studio: publish the place, open it from Roblox, and enable Studio API access in Game Settings > Security"
+			)
+		end
+	end
+	return nil
+end
 
 local function defaultData(): SaveData
 	return { Version = DATA_VERSION, Fire = 0, Wins = 0, Upgrades = {} }
@@ -87,9 +115,14 @@ local function apply(player: Player, data: SaveData)
 end
 
 local function load(player: Player): Profile
+	local dataStore = getStore()
+	if not dataStore then
+		return { Data = defaultData(), Loaded = false }
+	end
+
 	for attempt = 1, LOAD_ATTEMPTS do
 		local ok, result = pcall(function()
-			return store:GetAsync(keyFor(player))
+			return dataStore:GetAsync(keyFor(player))
 		end)
 		if ok then
 			return { Data = sanitize(result), Loaded = true }
@@ -103,9 +136,16 @@ local function load(player: Player): Profile
 	return { Data = defaultData(), Loaded = false }
 end
 
+-- Loaded is false both when the load failed and when DataStores are unavailable.
+
 local function save(player: Player)
 	local profile = profiles[player]
 	if not profile or not profile.Loaded then
+		return
+	end
+
+	local dataStore = getStore()
+	if not dataStore then
 		return
 	end
 
@@ -114,7 +154,7 @@ local function save(player: Player)
 
 	for attempt = 1, SAVE_ATTEMPTS do
 		local ok, err = pcall(function()
-			store:UpdateAsync(keyFor(player), function()
+			dataStore:UpdateAsync(keyFor(player), function()
 				return data
 			end)
 		end)

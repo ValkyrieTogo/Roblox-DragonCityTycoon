@@ -138,8 +138,11 @@ function Hud.Init()
 	watchStat("Fire", updateFire)
 	watchStat("Wins", updateWins)
 
-	Remotes.Won().OnClientEvent:Connect(function(wins: unknown)
-		showWinBanner(screen, if typeof(wins) == "number" then wins else 0)
+	-- Waiting for the remote must not block the rest of client startup.
+	task.spawn(function()
+		Remotes.Won().OnClientEvent:Connect(function(wins: unknown)
+			showWinBanner(screen, if typeof(wins) == "number" then wins else 0)
+		end)
 	end)
 end
 
