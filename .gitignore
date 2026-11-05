@@ -1,0 +1,20 @@
+# Wally output (restored with `wally install`)
+/Packages
+/ServerPackages
+/DevPackages
+wally.lock
+
+# Roblox Studio lock files
+*.rbxl.lock
+*.rbxlx.lock
+
+# Selene generated std files
+roblox.yml
+roblox.toml
+
+# Editor / OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+Thumbs.db
+.DS_Store
