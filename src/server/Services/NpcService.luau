@@ -19,6 +19,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local DragonCostume = require(script.Parent.Parent.DragonCostume)
+local Mouth = require(ReplicatedStorage.Shared.Mouth)
 local Rig = require(script.Parent.Parent.Npc.Rig)
 
 local NpcService = {}
@@ -138,15 +139,8 @@ local function sayNext(npc: Npc)
 	npc.NextLine = os.clock() + Config.NpcLineSeconds
 end
 
-local function flameOf(model: Model): ParticleEmitter?
-	local head = model:FindFirstChild("Head")
-	local mouth = if head then head:FindFirstChild("Mouth") else nil
-	local flame = if mouth then mouth:FindFirstChild("Flame") else nil
-	return if flame and flame:IsA("ParticleEmitter") then flame else nil
-end
-
 local function breathe(npc: Npc)
-	local flame = flameOf(npc.Model)
+	local flame = Mouth.Flame(npc.Model)
 	if not flame then
 		return
 	end

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Format = require(ReplicatedStorage.Shared.Format)
+local Mouth = require(ReplicatedStorage.Shared.Mouth)
 
 local FireEffects = {}
 
@@ -16,15 +17,6 @@ local BASE_SPEED = 22
 local BASE_PEAK_SIZE = 1.6
 local GLOW_SECONDS = 0.12
 local POPUP_SECONDS = 0.8
-
-local function findMouth(character: Model): Attachment?
-	local head = character:FindFirstChild("Head")
-	if not head then
-		return nil
-	end
-	local mouth = head:FindFirstChild("Mouth")
-	return if mouth and mouth:IsA("Attachment") then mouth else nil
-end
 
 local function sizeFor(scale: number): NumberSequence
 	local peak = BASE_PEAK_SIZE * scale
@@ -48,12 +40,8 @@ local function flashGlow(mouth: Attachment, scale: number)
 end
 
 local function showPopup(mouth: Attachment, amount: number, scale: number)
-	local part = mouth.Parent
-	if not part or not part:IsA("BasePart") then
-		return
-	end
-
 	local billboard = Instance.new("BillboardGui")
+	billboard.Adornee = mouth
 	billboard.Size = UDim2.fromOffset(120, 40)
 	billboard.StudsOffsetWorldSpace = Vector3.new(0, 2 * scale, 0)
 	billboard.AlwaysOnTop = true
@@ -69,7 +57,7 @@ local function showPopup(mouth: Attachment, amount: number, scale: number)
 	label.Text = `+{Format.Short(amount)}`
 	label.Parent = billboard
 
-	billboard.Parent = part
+	billboard.Parent = mouth
 
 	TweenService:Create(billboard, TweenInfo.new(POPUP_SECONDS, Enum.EasingStyle.Quad), {
 		StudsOffsetWorldSpace = Vector3.new(0, 5 * scale, 0),
@@ -83,7 +71,7 @@ end
 
 -- One breath from this character, worth `amount` Fire.
 function FireEffects.Burst(character: Model, amount: number)
-	local mouth = findMouth(character)
+	local mouth = Mouth.Find(character)
 	if not mouth then
 		return
 	end
