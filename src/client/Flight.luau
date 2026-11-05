@@ -1,7 +1,9 @@
 --!strict
--- Flying. Dragons do not jump: Space (or the jump button) takes off, holding
--- it climbs, releasing it glides slowly down, and touching the ground lands.
--- Walking off an edge starts a glide too, so nobody falls off the island.
+-- Flying. Dragons do not jump: Space (or the jump button) takes off. In the
+-- air the dragon goes where the camera looks: forward flies along the
+-- camera's aim, up or down included, strafing stays level, Space adds a
+-- climb, and hovering with no input sinks slowly. Touching the ground while
+-- sinking lands. Walking off an edge starts a glide, so nobody falls off.
 -- The character's physics belong to this client, so a LinearVelocity on the
 -- root does the moving and the dragon is turned to face its travel. The
 -- local attribute "Flying" on the player tells the HUD and the animator.
@@ -145,18 +147,34 @@ local function update(dt: number)
 	end
 
 	local speedScale = math.sqrt(scale)
-	local move = humanoid.MoveDirection
-	local horizontal = Vector3.new(move.X, 0, move.Z)
-	local vertical = if climbing() then Config.FlyClimbSpeed * speedScale else -Config.FlySinkSpeed * speedScale
-	current.VectorVelocity = horizontal * Config.FlySpeed * speedScale + Vector3.new(0, vertical, 0)
+	local move = humanoid.MoveDirection -- camera-relative, flat, from the control script
 
-	if horizontal.Magnitude > 0.05 then
-		local goal = CFrame.lookAt(root.Position, root.Position + horizontal)
+	-- Split the input into forward and sideways relative to the camera, then
+	-- send the forward part along the camera's true aim so pitch steers.
+	local camera = Workspace.CurrentCamera
+	local look = if camera then camera.CFrame.LookVector else root.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	flat = if flat.Magnitude > 0.01 then flat.Unit else root.CFrame.LookVector
+	local right = Vector3.new(-flat.Z, 0, flat.X)
+	local forward = move:Dot(flat)
+	local sideways = move:Dot(right)
+	local velocity = (look * forward + right * sideways) * Config.FlySpeed * speedScale
+
+	if climbing() then
+		velocity += Vector3.new(0, Config.FlyClimbSpeed * speedScale, 0)
+	elseif move.Magnitude < 0.05 then
+		velocity += Vector3.new(0, -Config.FlySinkSpeed * speedScale, 0)
+	end
+	current.VectorVelocity = velocity
+
+	local heading = Vector3.new(velocity.X, 0, velocity.Z)
+	if heading.Magnitude > 0.5 then
+		local goal = CFrame.lookAt(root.Position, root.Position + heading)
 		root.CFrame = root.CFrame:Lerp(goal, math.min(dt * TURN_RATE, 1))
 	end
 
-	-- Landing: sinking onto ground within reach of the feet.
-	if not climbing() then
+	-- Landing: descending onto ground within reach of the feet.
+	if velocity.Y < 0 then
 		local distance = groundBelow(model, root, height + LAND_CLEARANCE)
 		if distance then
 			land()

@@ -34,10 +34,11 @@ Config.BaseJumpHeight = 0
 Config.BaseJumpPower = 0
 
 -- Flight at scale 1, studs per second; scaled by the square root of the
--- dragon's size like walking. Hold Space to climb, release to sink.
-Config.FlySpeed = 34
-Config.FlyClimbSpeed = 22
-Config.FlySinkSpeed = 7
+-- dragon's size like walking. Forward flies where the camera aims, Space
+-- adds a climb, hovering with no input sinks.
+Config.FlySpeed = 36
+Config.FlyClimbSpeed = 20
+Config.FlySinkSpeed = 4
 
 -- Camera distance limits at scale 1, multiplied by the dragon's scale so a big
 -- dragon does not fill the screen.

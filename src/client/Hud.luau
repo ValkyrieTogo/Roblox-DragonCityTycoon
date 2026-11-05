@@ -182,7 +182,7 @@ function Hud.Init()
 		end
 
 		if localPlayer:GetAttribute("Flying") == true then
-			hint.Text = "Flying!  Hold Space to climb, release to glide down"
+			hint.Text = "Flying!  Fly where the camera looks.  Space to climb"
 			hint.TextColor3 = Color3.fromRGB(150, 210, 255)
 		elseif localPlayer:GetAttribute("Training") == true then
 			local perSecond = clickValue * Config.TrainingClicksPerTick / Config.TrainingTick
