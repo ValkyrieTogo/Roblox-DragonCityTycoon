@@ -15,9 +15,15 @@ Config.MaxClicksPerSecond = 12 -- server ignores clicks above this rate
 -- big changes and later ones taper off toward the cap.
 Config.DragonGrowthRate = 0.6
 Config.MaxDragonScale = 5
+-- Growth happens in steps of this size. Rescaling a character causes a small
+-- physics hitch, so it must not happen on every click.
+Config.DragonScaleStep = 0.1
+-- Shortest time between two rescales of the same character, in seconds.
+Config.DragonScaleInterval = 1
 
 function Config.DragonScale(fire: number): number
 	local scale = 1 + Config.DragonGrowthRate * math.log10(1 + math.max(fire, 0))
+	scale = math.floor(scale / Config.DragonScaleStep + 1e-6) * Config.DragonScaleStep
 	return math.clamp(scale, 1, Config.MaxDragonScale)
 end
 
