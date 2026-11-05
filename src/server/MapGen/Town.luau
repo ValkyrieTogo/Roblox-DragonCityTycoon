@@ -959,16 +959,39 @@ function Town.Decorate(map: Folder, rng: Random)
 	skillCounter(folder, facing(at(96, 12), at(0, 12)), rng)
 	Props.npcSpawn(folder, at(100, 24), at(0, 24), "Keeper", 1, 2)
 	house(folder, "Inn", facing(at(108, -78), at(0, -78)), 26, 18, RED, rng)
-	stall(folder, facing(at(76, -66), at(0, -66)), RED, rng)
-	Props.npcSpawn(folder, at(90, -56), at(0, -56), "Keeper", 1, 3)
+	local innStall = facing(at(76, -66), at(0, -66))
+	stall(folder, innStall, RED, rng)
+	Props.npcSpawn(
+		folder,
+		(innStall * CFrame.new(0, 0, 2)).Position,
+		(innStall * CFrame.new(0, 0, -10)).Position,
+		"Keeper",
+		1,
+		3
+	)
 	for _, p in { at(132, -48), at(136, 40), at(100, 48) } do
 		Props.tree(folder, p, rng)
 	end
 
 	-- South-west: market stalls.
-	stall(folder, facing(at(-86, 64), at(0, 30)), RED, rng)
-	stall(folder, facing(at(-54, 94), at(0, 50)), BLUE, rng)
-	Props.npcSpawn(folder, at(-70, 86), at(0, 40), "Walker", 1, 4)
+	-- Each stall has its keeper standing behind the counter.
+	type StallSpot = { At: Vector3, Toward: Vector3, Stripe: Color3 }
+	local stalls: { StallSpot } = {
+		{ At = at(-86, 64), Toward = at(0, 30), Stripe = RED },
+		{ At = at(-54, 94), Toward = at(0, 50), Stripe = BLUE },
+	}
+	for i, spot in stalls do
+		local base = facing(spot.At, spot.Toward)
+		stall(folder, base, spot.Stripe, rng)
+		Props.npcSpawn(
+			folder,
+			(base * CFrame.new(0, 0, 2)).Position,
+			(base * CFrame.new(0, 0, -10)).Position,
+			"Keeper",
+			1,
+			3 + i
+		)
+	end
 
 	-- South-east: the training pen and the green circle.
 	fence(folder, 52, 98, 54, 92, "north")
@@ -1021,16 +1044,6 @@ function Town.Decorate(map: Folder, rng: Random)
 		local a = rng:NextNumber(0, math.pi * 2)
 		local d = rng:NextNumber(radius - 40, radius - 12)
 		Props.rock(folder, at(math.cos(a) * d, math.sin(a) * d), rng:NextNumber(3, 6), rng)
-	end
-	for seat = 1, 4 do
-		local a = rng:NextNumber(0, math.pi * 2)
-		local d = rng:NextNumber(24, 56)
-		Props.npcSpawn(folder, at(math.cos(a) * d, math.sin(a) * d), at(0, 0), "Walker", 1, seat)
-	end
-	for seat = 1, 2 do
-		local a = rng:NextNumber(0, math.pi * 2)
-		local d = rng:NextNumber(30, 60)
-		Props.npcSpawn(folder, at(math.cos(a) * d, math.sin(a) * d), at(0, 0), "Villager", 1, seat)
 	end
 end
 

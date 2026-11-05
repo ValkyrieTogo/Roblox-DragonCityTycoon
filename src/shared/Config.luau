@@ -236,6 +236,22 @@ Config.Townsfolk = {
 			"Big dragons get a bigger room. That is the rule.",
 		},
 	},
+	["Market"] = {
+		Name = "Bram",
+		Lines = {
+			"Fresh fruit, fresh gems, fresh bread!",
+			"Heard the throne pays fifty times.",
+			"Everything half price. Tomorrow.",
+		},
+	},
+	["Market2"] = {
+		Name = "Wren",
+		Lines = {
+			"Have you seen the fountain eggs glow?",
+			"Portals tickle my scales.",
+			"Try the training pen before the arena.",
+		},
+	},
 } :: { [string]: NpcSpeech }
 
 Config.Walkers = {
@@ -269,6 +285,22 @@ Config.Townsfolk = {
 			"Welcome to the Ember Inn! Mind the chimney.",
 			"The arena is through the north gate.",
 			"Big dragons get a bigger room. That is the rule.",
+		},
+	},
+	["Market"] = {
+		Name = "Bram",
+		Lines = {
+			"Fresh fruit, fresh gems, fresh bread!",
+			"Heard the throne pays fifty times.",
+			"Everything half price. Tomorrow.",
+		},
+	},
+	["Market2"] = {
+		Name = "Wren",
+		Lines = {
+			"Have you seen the fountain eggs glow?",
+			"Portals tickle my scales.",
+			"Try the training pen before the arena.",
 		},
 	},
 } :: { [string]: NpcSpeech }

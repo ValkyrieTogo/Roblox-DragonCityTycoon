@@ -5,7 +5,7 @@
 --   Trainer   stands still, turns toward nearby players, breathes at its
 --             dummies now and then; speaks Config.Trainers[zone name]
 --   Keeper    stands still and turns like a trainer; speaks
---             Config.Townsfolk by Seat order (Gacha, SkillShop, Inn)
+--             Config.Townsfolk by Seat order (Gacha, SkillShop, Inn, Market, Market2)
 --   Walker    full-size townsfolk wandering near the spawn; Config.Walkers
 --   Villager  small hatchlings wandering near the spawn; Config.Villagers
 -- All NPCs cycle through their lines in a speech bubble; a Talk prompt
@@ -62,7 +62,7 @@ local function numberAttribute(instance: Instance, name: string, default: number
 	return if typeof(value) == "number" then value else default
 end
 
-local KEEPER_KEYS = { "Gacha", "SkillShop", "Inn" }
+local KEEPER_KEYS = { "Gacha", "SkillShop", "Inn", "Market", "Market2" }
 
 local function pick(list: { Config.NpcSpeech }, seat: number): Config.NpcSpeech
 	return list[((seat - 1) % #list) + 1]

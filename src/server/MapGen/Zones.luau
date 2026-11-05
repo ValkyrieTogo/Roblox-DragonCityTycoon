@@ -158,16 +158,12 @@ end
 
 local decorators: { [string]: (Region) -> () } = {}
 
--- Hatchery: a grassy village of huts, stone eggs, trees, a welcome fire, the
--- first training yard and a few hatchlings wandering about.
+-- Hatchery: a grassy village of huts, stone eggs, trees, a welcome fire and
+-- the first training yard.
 decorators["Hatchery"] = function(r)
 	local f = r.Parent
 	trainingYard(r, -1, 0.3, 6)
 	Props.campfire(f, ground(r, s(r, 24), along(r, 0.14)), 3, r.Rng)
-	for seat = 1, #Config.Villagers do
-		local p = scatterPoint(r, PATH_HALF + 6)
-		Props.npcSpawn(f, p, ground(r, 0, p.Z), "Villager", r.Index, seat)
-	end
 
 	local huts = {
 		{ -64, 0.16 },
