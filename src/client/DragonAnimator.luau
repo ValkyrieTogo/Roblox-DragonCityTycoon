@@ -240,7 +240,9 @@ function DragonAnimator.Init()
 		end
 	end)
 
-	RunService.RenderStepped:Connect(function(dt)
+	-- Stepped runs after the engine's animation step, so these transforms are
+	-- the last word each frame.
+	RunService.Stepped:Connect(function(_, dt)
 		local now = os.clock()
 		for model, rig in rigs do
 			if not model.Parent or not rig.Mesh.Parent then

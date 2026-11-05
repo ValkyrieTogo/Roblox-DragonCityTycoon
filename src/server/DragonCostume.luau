@@ -201,6 +201,10 @@ local function dressMesh(character: Model, template: Model, root: BasePart, huma
 			descendant.CanQuery = false
 			descendant.CanTouch = false
 			descendant.Massless = true
+		elseif descendant:IsA("AnimationController") or descendant:IsA("Animator") then
+			-- The importer adds one. With nothing playing it still resets every
+			-- bone each frame it runs, fighting the client's procedural animation.
+			descendant:Destroy()
 		end
 	end
 
