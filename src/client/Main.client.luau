@@ -10,6 +10,7 @@ local ClickInput = require(script.Parent.ClickInput)
 local FireEffects = require(script.Parent.FireEffects)
 local Hud = require(script.Parent.Hud)
 local IceWalls = require(script.Parent.IceWalls)
+local Shop = require(script.Parent.Shop)
 
 local localPlayer = Players.LocalPlayer
 
@@ -39,6 +40,7 @@ end
 print(`[{Config.GameName}] client starting`)
 
 Hud.Init()
+Shop.Init()
 CameraScale.Init()
 IceWalls.Init()
 ClickInput.Init()

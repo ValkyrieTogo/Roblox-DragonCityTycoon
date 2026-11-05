@@ -60,4 +60,64 @@ Config.Zones = {
 Config.ZoneWidth = 120
 Config.IceWallHeight = 28
 
+-- Upgrades bought with Fire. Each level adds PerLevel to Fire per click.
+-- Cost for the next level is BaseCost * CostGrowth ^ currentLevel.
+export type Upgrade = {
+	Id: string,
+	Name: string,
+	Description: string,
+	PerLevel: number,
+	BaseCost: number,
+	CostGrowth: number,
+	MaxLevel: number,
+}
+
+Config.Upgrades = {
+	{
+		Id = "Breath",
+		Name = "Dragon Breath",
+		Description = "+1 Fire per click",
+		PerLevel = 1,
+		BaseCost = 25,
+		CostGrowth = 1.3,
+		MaxLevel = 200,
+	},
+	{
+		Id = "Fangs",
+		Name = "Fangs",
+		Description = "+5 Fire per click",
+		PerLevel = 5,
+		BaseCost = 600,
+		CostGrowth = 1.45,
+		MaxLevel = 100,
+	},
+	{
+		Id = "Inferno",
+		Name = "Inferno",
+		Description = "+25 Fire per click",
+		PerLevel = 25,
+		BaseCost = 8000,
+		CostGrowth = 1.6,
+		MaxLevel = 50,
+	},
+} :: { Upgrade }
+
+function Config.GetUpgrade(id: string): Upgrade?
+	for _, upgrade in Config.Upgrades do
+		if upgrade.Id == id then
+			return upgrade
+		end
+	end
+	return nil
+end
+
+function Config.UpgradeCost(upgrade: Upgrade, currentLevel: number): number
+	return math.floor(upgrade.BaseCost * upgrade.CostGrowth ^ currentLevel)
+end
+
+-- Name of the player attribute that holds an upgrade's level.
+function Config.UpgradeAttribute(id: string): string
+	return `Upgrade_{id}`
+end
+
 return Config

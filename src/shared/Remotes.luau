@@ -41,4 +41,14 @@ function Remotes.Click(): RemoteEvent
 	return getEvent("Click")
 end
 
+-- Client -> server: buy one level of an upgrade. Argument: upgrade id (string).
+function Remotes.BuyUpgrade(): RemoteEvent
+	return getEvent("BuyUpgrade")
+end
+
+-- Server -> client: the player just won. Argument: total wins (number).
+function Remotes.Won(): RemoteEvent
+	return getEvent("Won")
+end
+
 return Remotes
