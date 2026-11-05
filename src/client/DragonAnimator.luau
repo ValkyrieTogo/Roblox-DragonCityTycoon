@@ -16,12 +16,15 @@ local DragonAnimator = {}
 
 local COSTUME_NAME = "DragonCostume"
 
--- Wing pose, in radians. The rest pose has the wings spread; these fold them.
-local WING_FOLD = 0.85 -- shoulder down from the rest pose
-local WING_FOLD_WALK = 0.2 -- extra when walking
-local WING_SWEEP = 0.45 -- shoulder back along the body
-local WING_ELBOW = 0.55 -- second segment bent back up
-local WING_TIP = 0.25 -- outer segments curled
+-- Wing pose, in radians. The rest pose has the wings spread and raised;
+-- these tuck them down along the flanks. The sweep is applied first, so the
+-- wing goes back along the body, then the fold drops what still sticks out.
+local WING_SWEEP = 1.05 -- shoulder back along the body
+local WING_FOLD = 1.2 -- shoulder down
+local WING_FOLD_WALK = 0.1 -- extra when walking
+local WING_ELBOW_FOLD = 0.5 -- forearm down further, hugging the flank
+local WING_ELBOW_SWEEP = 0.35 -- forearm back along the body
+local WING_TIP = 0.25 -- outer segments curled down
 
 -- A bone plus the mesh's axes expressed in the bone's own space, so a swing
 -- "about the body's sideways axis" is the same call for every bone.
@@ -110,21 +113,22 @@ local function animate(rig: Rig, dt: number, now: number)
 	-- walking, with a soft breathing lift. The phase accumulates so a change
 	-- of speed never snaps the angle.
 	rig.Flap += dt * (1.6 + 1.2 * walk)
-	local breathe = math.sin(rig.Flap) * (0.05 + 0.04 * walk)
+	local breathe = math.sin(rig.Flap) * (0.035 + 0.03 * walk)
 	local fold = WING_FOLD + WING_FOLD_WALK * walk + breathe
-	local sweep = WING_SWEEP + 0.15 * walk
+	local sweep = WING_SWEEP + 0.1 * walk
 	for _, wing in rig.Wings do
 		for i, segment in wing do
 			local side = segment.Side
 			if i == 1 then
-				-- Shoulder: down about the body's forward axis, back about its up axis.
+				-- Shoulder: back about the body's up axis, then down about its forward axis.
 				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, -fold * side)
 					* CFrame.fromAxisAngle(segment.AxisY, -sweep * side)
 			elseif i == 2 then
-				-- Elbow: bends back up so the wing folds like a Z instead of dragging.
-				swing(segment, segment.AxisZ, (WING_ELBOW - breathe * 0.5) * side)
+				-- Elbow: keeps going down and back so the forearm lies along the flank.
+				segment.Bone.Transform = CFrame.fromAxisAngle(segment.AxisZ, -(WING_ELBOW_FOLD + breathe * 0.5) * side)
+					* CFrame.fromAxisAngle(segment.AxisY, -WING_ELBOW_SWEEP * side)
 			else
-				swing(segment, segment.AxisZ, WING_TIP * side)
+				swing(segment, segment.AxisZ, -WING_TIP * side)
 			end
 		end
 	end
@@ -207,6 +211,12 @@ local function track(model: Model)
 			Stride = rng:NextNumber(0, 1),
 			Flap = rng:NextNumber(0, math.pi * 2),
 		}
+		local rig = rigs[model]
+		if rig then
+			print(
+				`[DragonAnimator] {model.Name}: wings {#rig.Wings[1] or 0}/{#rig.Wings[2] or 0} legs {#rig.FrontLegs}/{#rig.BackLegs} tail {#rig.Tail} neck {rig.Neck ~= nil} mesh {mesh:GetFullName()} size {mesh.Size}`
+			)
+		end
 	end)
 end
 
