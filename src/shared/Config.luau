@@ -9,6 +9,7 @@ Config.GameName = "Dragon City Tycoon"
 -- Clicking
 Config.BaseFirePerClick = 1
 Config.MaxClicksPerSecond = 12 -- server ignores clicks above this rate
+Config.HoldClicksPerSecond = 8 -- breaths per second while the button is held down
 
 -- Growth. The player is the dragon: their whole character is scaled by this.
 -- Scale is 1 at zero Fire and grows with the log of Fire, so early clicks show

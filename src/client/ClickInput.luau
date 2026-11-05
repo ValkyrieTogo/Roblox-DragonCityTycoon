@@ -1,8 +1,9 @@
 --!strict
--- Turns mouse clicks and screen taps into Click remotes. Plays the fire effect
--- at once, before the server replies, so clicking feels instant. The same rate
--- limit as the server is applied here so the effect never plays for a click
--- the server will drop.
+-- Turns mouse clicks and screen taps into Click remotes. Holding the button
+-- or finger down keeps breathing at Config.HoldClicksPerSecond. Plays the
+-- fire effect at once, before the server replies, so clicking feels instant.
+-- The same rate limit as the server is applied here so the effect never
+-- plays for a click the server will drop.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,6 +19,7 @@ local localPlayer = Players.LocalPlayer
 
 local tokens = Config.MaxClicksPerSecond
 local lastRefill = os.clock()
+local holding = false
 
 local function takeToken(): boolean
 	local now = os.clock()
@@ -58,16 +60,40 @@ local function onClick()
 	end
 end
 
+local function isBreathInput(input: InputObject): boolean
+	local kind = input.UserInputType
+	return kind == Enum.UserInputType.MouseButton1 or kind == Enum.UserInputType.Touch
+end
+
+-- Keeps breathing while the button stays down, after the first click.
+local function holdLoop()
+	local interval = 1 / Config.HoldClicksPerSecond
+	task.wait(interval)
+	while holding do
+		onClick()
+		task.wait(interval)
+	end
+end
+
 function ClickInput.Init()
 	UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		-- gameProcessed is true when the click landed on a GUI button.
-		if gameProcessed then
+		if gameProcessed or not isBreathInput(input) then
 			return
 		end
-		local kind = input.UserInputType
-		if kind == Enum.UserInputType.MouseButton1 or kind == Enum.UserInputType.Touch then
-			onClick()
+		onClick()
+		if not holding then
+			holding = true
+			task.spawn(holdLoop)
 		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if isBreathInput(input) then
+			holding = false
+		end
+	end)
+	UserInputService.WindowFocusReleased:Connect(function()
+		holding = false
 	end)
 end
 

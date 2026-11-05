@@ -189,7 +189,7 @@ function Hud.Init()
 			hint.Text = `Training!  +{Format.Short(perSecond)} Fire per second.  Space to leave`
 			hint.TextColor3 = Color3.fromRGB(255, 170, 40)
 		else
-			hint.Text = "Click or tap anywhere to breathe fire.  Space to fly"
+			hint.Text = "Click or hold anywhere to breathe fire.  Space to fly"
 			hint.TextColor3 = Color3.fromRGB(220, 220, 220)
 		end
 	end
