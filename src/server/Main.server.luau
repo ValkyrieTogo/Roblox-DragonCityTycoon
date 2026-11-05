@@ -1,13 +1,16 @@
 --!strict
--- Server entry point. Runs once when the server starts.
+-- Server entry point. Starts every service in dependency order.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local CashService = require(script.Parent.Services.CashService)
+local PlotService = require(script.Parent.Services.PlotService)
 
-print(`[{Config.GameName}] server started`)
+print(`[{Config.GameName}] server starting`)
 
-Players.PlayerAdded:Connect(function(player: Player)
-	print(`{player.Name} joined`)
-end)
+-- Cash first so leaderstats exist before a plot is assigned.
+CashService.Init()
+PlotService.Init()
+
+print(`[{Config.GameName}] server ready`)
